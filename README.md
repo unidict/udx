@@ -4,7 +4,7 @@
 [![C](https://img.shields.io/badge/C-11-blue.svg)](https://en.wikipedia.org/wiki/C11_(C_standard))
 [![CI](https://github.com/kejinlu/libudx/actions/workflows/ci.yml/badge.svg)](https://github.com/kejinlu/libudx/actions/workflows/ci.yml)
 
-**Universal Dictionary eXchange** — A fast, minimal C library for reading and writing dictionary data files with efficient B+ tree indexing and zlib compression.
+**libudx** — A fast, minimal C library for reading and writing **[UDX (Universal Dictionary eXchange)](docs/format.md)** dictionary file.
 
 ## Features
 
@@ -12,12 +12,8 @@
 - **Space Efficient** — Zlib compression for reduced storage
 - **Case-Insensitive Search** — Automatic word folding for case-insensitive lookup
 - **Prefix Matching** — Efficient prefix-based searching
-- **Multiple Databases** — Single file can contain multiple named databases
-- **Metadata Support** — Attach custom metadata to each database
-- **Zero-Copy Parsing** — Efficient data access with minimal copying
-- **Chunk-Based Storage** — 64KB chunks for optimal compression ratios
-- **Large File Support** — 64-bit file offsets for files > 2GB
-- **Permissive License** — MIT License with some components under their original licenses
+- **Multiple Databases** — Single file can contain multiple named dictionary databases
+- **Large File Support** — 64-bit file offsets for files > 4GB
 
 ## Building
 
@@ -30,8 +26,9 @@
 ### Install Dependencies
 
 **macOS:**
+zlib is included with Xcode Command Line Tools. Install if needed:
 ```bash
-brew install zlib
+xcode-select --install
 ```
 
 **Ubuntu/Debian:**
@@ -44,18 +41,52 @@ sudo apt-get install zlib1g-dev
 sudo dnf install zlib-devel
 ```
 
+**Windows:**
+Install zlib using [vcpkg](https://vcpkg.io/):
+```cmd
+vcpkg install zlib:x64-windows
+```
+
+Then configure CMake with the vcpkg toolchain:
+```cmd
+cmake -B build -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+```
+
 ### Build from Source
 
 ```bash
+# Clone the repository
 git clone https://github.com/kejinlu/libudx.git
 cd libudx
+
+# Configure with CMake (requires CMake 3.14 or later)
 mkdir build && cd build
 cmake ..
-make
-sudo make install
+
+# Build
+cmake --build .
+
+# Run tests (optional)
+ctest --output-on-failure
+
+# Install (optional, installs to system default location)
+sudo cmake --install
 ```
 
-### Compile Directly
+#### CMake Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `UDX_BUILD_TESTS` | `ON` | Build test suite |
+| `UDX_BUILD_EXAMPLES` | `ON` | Build example programs |
+| `BUILD_SHARED_LIBS` | `OFF` | Build shared library instead of static |
+
+**Example: Disable tests and build shared library**
+```bash
+cmake -DUDX_BUILD_TESTS=OFF -DBUILD_SHARED_LIBS=ON ..
+```
+
+### Compile Directly (Without CMake)
 
 ```bash
 gcc -o myprogram myprogram.c -I./src -L./build -ludx -lz
@@ -162,106 +193,6 @@ while ((entry = udx_db_iter_next(iter)) != NULL) {
 udx_db_iter_destroy(iter);
 ```
 
-## API Overview
-
-### Writer APIs
-
-| Function | Description |
-|----------|-------------|
-| `udx_writer_open()` | Create a new UDX file |
-| `udx_writer_close()` | Finalize and close the file |
-| `udx_db_builder_create()` | Create a database builder |
-| `udx_db_builder_add_entry()` | Add a word/data pair |
-| `udx_db_builder_finish()` | Complete building the database |
-
-### Reader APIs
-
-| Function | Description |
-|----------|-------------|
-| `udx_reader_open()` | Open an existing UDX file |
-| `udx_reader_close()` | Close the file |
-| `udx_db_open()` | Open a database by name |
-| `udx_db_close()` | Close a database |
-| `udx_db_lookup()` | Look up a word (exact match) |
-| `udx_db_index_lookup()` | Low-level index lookup |
-| `udx_db_index_prefix_match()` | Prefix-based search |
-| `udx_db_iter_create()` | Create an iterator |
-| `udx_db_iter_next()` | Get next entry |
-
-### Error Handling
-
-All functions that can fail use `udx_error_t` return codes:
-
-```c
-typedef enum {
-    UDX_OK                      = 0,    // Success
-    UDX_ERR_INVALID_PARAM       = -1,   // Invalid parameter
-    UDX_ERR_IO                  = -2,   // File I/O error
-    UDX_ERR_BPTREE              = -3,   // B+ tree operation failed
-    UDX_ERR_HEADER              = -4,   // Header read/write failed
-    UDX_ERR_CHUNK               = -5,   // Chunk operation failed
-    UDX_ERR_WORDS               = -6,   // Words container failed
-    UDX_ERR_ACTIVE_DB           = -7,   // Database builder still active
-    UDX_ERR_DUPLICATE_NAME      = -8,   // Duplicate database name
-    UDX_ERR_METADATA            = -9,   // Invalid metadata parameters
-    UDX_ERR_OVERFLOW            = -10,  // Integer/size overflow
-    UDX_ERR_MEMORY              = -11   // Memory allocation failed
-} udx_error_t;
-```
-
-## File Format
-
-UDX files are organized as follows:
-
-```
-┌─────────────────────────────────────────────────────────┐
-│ Main Header                                             │
-│  - Magic: "UDX\0"                                       │
-│  - Version: 1.0                                         │
-│  - Database Table Offset                                │
-├─────────────────────────────────────────────────────────┤
-│ Database 1                                              │
-│  - DB Header (metadata size, offsets, counts, checksum) │
-│  - Metadata (optional)                                  │
-│  - Chunk Table                                          │
-│  - Chunks (compressed data blocks)                      │
-│  - B+ Tree Index                                        │
-│    - Internal Nodes (compressed)                        │
-│    - Leaf Nodes (compressed)                            │
-├─────────────────────────────────────────────────────────┤
-│ Database 2                                              │
-│  - ...                                                  │
-├─────────────────────────────────────────────────────────┤
-│ ...                                                     │
-├─────────────────────────────────────────────────────────┤
-│ Database Table                                          │
-│  - Count                                                │
-│  - [Offset, Name] pairs                                 │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Key Design Points
-
-- **Chunk Storage**: Data is stored in 64KB chunks, each compressed independently
-- **Address Encoding**: 48-bit chunk index + 16-bit offset in chunk
-- **Index Structure**: Static B+ tree with GoldenDict-style layout
-- **Checksum**: CRC32 checksum on database header for corruption detection
-
-## Architecture
-
-```
-libudx/
-├── src/
-│   ├── udx_writer.h/c    # High-level writer API
-│   ├── udx_reader.h/c    # High-level reader API
-│   ├── udx_chunk.h/c     # Chunk-based storage with compression
-│   ├── udx_words.h/c     # Ordered word container (B-tree wrapper)
-│   ├── udx_types.h/c     # Core data types and serialization
-│   ├── udx_utils.h/c     # Utility functions (string folding, I/O)
-│   └── udx_btree.h/c     # B+ tree implementation (Joshua J Baker)
-└── include/              # Public headers
-```
-
 ## Performance
 
 | Operation | Complexity |
@@ -276,26 +207,6 @@ libudx/
 - Lookup: ~0.5μs per query
 - Prefix match: ~1μs per query
 - File size: ~40% smaller than uncompressed
-
-## Design Decisions
-
-### Why B+ Trees?
-
-B+ trees provide predictable O(log n) performance for lookups and naturally support range queries and prefix matching. The static layout (pre-built during write) enables efficient zero-copy parsing during read.
-
-### Why Chunks?
-
-Storing data in fixed-size (64KB) chunks with independent compression provides:
-- Better compression ratios (similar data compresses together)
-- Random access to individual data blocks
-- Memory-efficient reading (only decompress what's needed)
-
-### Case-Insensitive Search
-
-The library uses **word folding** (converting to lowercase) for indexing while preserving the original word case. This enables:
-- Case-insensitive lookups ("Hello", "hello", "HELLO" all match)
-- Preserved original forms for display
-- Efficient B+ tree traversal (sorted by folded form)
 
 ## Thread Safety
 
@@ -324,7 +235,7 @@ Contributions are welcome! Please:
 ```
 MIT License
 
-Copyright (c) 2026 kejinlu
+Copyright (c) 2026 kejinlu <kejinlu@gmail.com> (libudx project)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -345,19 +256,20 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-**Third-party components:**
-
-- **B+ tree implementation**: Copyright 2020 Joshua J Baker (MIT License)
-- **zlib**: Copyright 1995-2023 Jean-loup Gailly and Mark Adler (zlib License)
-
 ## Acknowledgments
 
-- [B+ tree implementation](https://github.com/tidwall/btree) by Joshua J Baker
-- [zlib](https://zlib.net/) by Jean-loup Gailly and Mark Adler
-- File format inspired by [GoldenDict](https://goldendict.org/)
+libudx incorporates the following third-party components:
+
+- **[B-tree implementation](https://github.com/tidwall/btree)** by Joshua J Baker (MIT License)
+- **[zlib](https://zlib.net/)** by Jean-loup Gailly and Mark Adler (zlib License)
+
+## References
+
+- [B+ Tree - Wikipedia](https://en.wikipedia.org/wiki/B%2B_tree) - Standard B+ tree structure with internal nodes for navigation and leaf nodes for data storage
 
 ## See Also
 
-- [UDX Format Specification](docs/format.md) (TODO)
-- [API Documentation](docs/api.md) (TODO)
+- [Architecture & Design Decisions](docs/architecture.md)
+- [API Documentation](docs/api.md)
+- [UDX Format Specification](docs/format.md)
 - [Examples](examples/) (TODO)
