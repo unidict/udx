@@ -4,23 +4,19 @@
 [![C](https://img.shields.io/badge/C-11-blue.svg)](https://en.wikipedia.org/wiki/C11_(C_standard))
 [![CI](https://github.com/kejinlu/libudx/actions/workflows/ci.yml/badge.svg)](https://github.com/kejinlu/libudx/actions/workflows/ci.yml)
 
-**libudx** — A fast, minimal C library for reading and writing **[UDX (Universal Dictionary eXchange)](docs/format.md)** dictionary file.
+**libudx** — A fast, minimal C library for reading and writing **[UDX (Universal Dictionary eXchange)](docs/format.md)** file.
 
-## Features
+## Use Cases
 
-- **High Performance** — B+ tree indexing with O(log n) lookup
-- **Space Efficient** — Zlib compression for reduced storage
-- **Case-Insensitive Search** — Automatic word folding for case-insensitive lookup
-- **Prefix Matching** — Efficient prefix-based searching
-- **Multiple Databases** — Single file can contain multiple named dictionary databases
-- **Large File Support** — 64-bit file offsets for files > 4GB
+- **Standalone Dictionary Files** — Create self-contained dictionary files with embedded data and indexing. Multi-database support enables storing dictionary definitions enriched with images, audio, and other multimedia content in a single file.
+- **Indexing Engine** — Provide fast custom B+ tree indexing for dictionaries in various formats (XML, DSL, MDict, etc.)
 
 ## Building
 
 ### Prerequisites
 
 - C compiler with C11 support
-- zlib development library
+- zlib library
 - CMake (recommended) or direct compilation
 
 ### Install Dependencies
