@@ -8,16 +8,16 @@
 
 ## Use Cases
 
-- **Standalone Dictionary Files** — Create self-contained dictionary files with embedded data and indexing. Multi-database support enables storing dictionary definitions enriched with images, audio, and other multimedia content in a single file.
-- **Indexing Engine** — Provide fast custom B+ tree indexing for dictionaries in various formats (XML, DSL, MDict, etc.)
+- **Standalone Dictionary** — Create self-contained dictionary files with embedded data and indexing. Multi-database support enables storing dictionary definitions enriched with images, audio, and other multimedia content in a single file.
+- **Indexing Engine** — Provide fast custom B+ tree indexing for existing dictionaries in various formats.
 
 ## Building
 
 ### Prerequisites
 
 - C compiler with C11 support
-- zlib library
-- CMake (recommended) or direct compilation
+- zlib library 1.2.12+
+- CMake 3.14+ or direct compilation
 
 ### Install Dependencies
 
