@@ -140,7 +140,7 @@ static bool chunk_writer_save_current(udx_chunk_writer *writer) {
     return true;
 }
 
-udx_chunk_writer *udx_chunk_writer_create(FILE *file) {
+udx_chunk_writer *udx_chunk_writer_open(FILE *file) {
     if (file == NULL) {
         return NULL;
     }
@@ -159,16 +159,6 @@ udx_chunk_writer *udx_chunk_writer_create(FILE *file) {
     }
 
     return writer;
-}
-
-void udx_chunk_writer_destroy(udx_chunk_writer *writer) {
-    if (writer == NULL) {
-        return;
-    }
-
-    free(writer->buffer);
-    free(writer->offsets);
-    free(writer);
 }
 
 udx_chunk_address udx_chunk_writer_add_block(udx_chunk_writer *writer,
@@ -244,6 +234,15 @@ uint64_t udx_chunk_writer_finish(udx_chunk_writer *writer) {
     }
 
     return (uint64_t)table_offset;
+}
+
+void udx_chunk_writer_close(udx_chunk_writer *writer) {
+    if (writer == NULL) {
+        return;
+    }
+    free(writer->buffer);
+    free(writer->offsets);
+    free(writer);
 }
 
 // ============================================================

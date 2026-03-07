@@ -524,7 +524,7 @@ udx_db_builder *udx_db_builder_create_with_metadata(udx_writer *writer,
         goto error;
     }
 
-    db_builder->chunk_writer = udx_chunk_writer_create(writer->file);
+    db_builder->chunk_writer = udx_chunk_writer_open(writer->file);
     if (db_builder->chunk_writer == NULL) {
         goto error;
     }
@@ -564,7 +564,7 @@ udx_db_builder *udx_db_builder_create_with_metadata(udx_writer *writer,
     return db_builder;
 
 error:
-    if (db_builder->chunk_writer) udx_chunk_writer_destroy(db_builder->chunk_writer);
+    if (db_builder->chunk_writer) udx_chunk_writer_close(db_builder->chunk_writer);
     if (db_builder->words) udx_words_destroy(db_builder->words);
     // Seek file pointer back to the position before this db, so that
     // subsequent operations start from a clean position.
@@ -667,7 +667,7 @@ cleanup:
         udx_fseek(writer->file, builder->db_offset, SEEK_SET);
     }
 
-    udx_chunk_writer_destroy(builder->chunk_writer);
+    udx_chunk_writer_close(builder->chunk_writer);
     udx_words_destroy(builder->words);
     free(builder);
 

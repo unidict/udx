@@ -25,17 +25,11 @@ extern "C" {
 typedef struct udx_chunk_writer udx_chunk_writer;
 
 /**
- * Create a Chunk Writer
+ * Open a Chunk Writer
  * @param file Output file (must be opened, writable)
  * @return Writer pointer, or NULL on failure
  */
-udx_chunk_writer *udx_chunk_writer_create(FILE *file);
-
-/**
- * Destroy a Chunk Writer
- * @param writer Writer pointer
- */
-void udx_chunk_writer_destroy(udx_chunk_writer *writer);
+udx_chunk_writer *udx_chunk_writer_open(FILE *file);
 
 /**
  * Add a data block to the chunk writer
@@ -57,8 +51,18 @@ udx_chunk_address udx_chunk_writer_add_block(udx_chunk_writer *writer,
  * Finish writing and write the chunk offset table
  * @param writer Writer pointer
  * @return File offset of the chunk offset table, or 0 on failure
+ *
+ * @note This function does not free the writer, call udx_chunk_writer_close() after
  */
 uint64_t udx_chunk_writer_finish(udx_chunk_writer *writer);
+
+/**
+ * Close the writer and free resources
+ * @param writer Writer pointer
+ *
+ * @note Call this after udx_chunk_writer_finish() to free resources
+ */
+void udx_chunk_writer_close(udx_chunk_writer *writer);
 
 // ============================================================
 // Chunk Reader
