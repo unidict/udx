@@ -238,9 +238,33 @@ udx_db_iter_destroy(iter);
 
 ## Thread Safety
 
-libudx is **not thread-safe** by design. For concurrent access:
-- Use separate `udx_reader` instances per thread
-- Protect `udx_writer` with external synchronization
+libudx is **not thread-safe** by design. For concurrent access, use one of the following approaches:
+
+**Recommended: Separate reader per thread**
+```c
+// Thread 1
+udx_reader *reader1 = udx_reader_open("dict.udx");
+udx_db *db1 = udx_db_open(reader1, "english");
+udx_db_entry *entry1 = udx_db_lookup(db1, "hello");
+
+// Thread 2 (simultaneous access)
+udx_reader *reader2 = udx_reader_open("dict.udx");
+udx_db *db2 = udx_db_open(reader2, "english");
+udx_db_entry *entry2 = udx_db_lookup(db2, "world");
+```
+
+**Alternative: Shared reader with external lock**
+```c
+udx_reader *reader = udx_reader_open("dict.udx");
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+
+// In each thread
+pthread_mutex_lock(&lock);
+udx_db_entry *entry = udx_db_lookup(db, "hello");
+pthread_mutex_unlock(&lock);
+```
+
+**Note:** `udx_writer` must always be protected with external synchronization if shared across threads.
 
 ## Platform Support
 
