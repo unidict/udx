@@ -2,40 +2,9 @@
 
 This document describes the internal architecture and design decisions of libudx.
 
-## File Format
+## Key Design Points
 
-UDX files are organized as follows:
-
-```
-┌─────────────────────────────────────────────────────────┐
-│ Main Header                                             │
-│  - Magic: "UDX\0"                                       │
-│  - Version: 1.0                                         │
-│  - Dictionary DB Table Offset                           │
-├─────────────────────────────────────────────────────────┤
-│ Dictionary DB 1                                         │
-│  - DB Header (metadata size, offsets, counts, checksum) │
-│  - Metadata (optional)                                  │
-│  - Chunks (compressed data blocks)                      │
-│  - Chunk Table                                          │
-│  - B+ Tree Index                                        │
-│    - Leaf Nodes (compressed)                            │
-│    - Internal Nodes (compressed)                        │
-├─────────────────────────────────────────────────────────┤
-│ Dictionary DB 2                                         │
-│  - ...                                                  │
-├─────────────────────────────────────────────────────────┤
-│ ...                                                     │
-├─────────────────────────────────────────────────────────┤
-│ Dictionary DB Table                                     │
-│  - Count                                                │
-│  - [Offset, Name] pairs                                 │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Key Design Points
-
-- **Chunk Storage**: Data is stored in chunks with a maximum size of 64KB, each compressed independently
+- **Chunk Storage**: Data is stored in chunks with independent compression, block offset limited to 16-bit (0-65535)
 - **Address Encoding**: 48-bit chunk index + 16-bit offset in chunk
 - **Index Structure**: Static B+ tree for efficient O(log n) lookups
 - **Checksum**: CRC32 checksum on database header for corruption detection
@@ -44,15 +13,14 @@ UDX files are organized as follows:
 
 ```
 libudx/
-├── src/
-│   ├── udx_writer.h/c    # High-level writer API
-│   ├── udx_reader.h/c    # High-level reader API
-│   ├── udx_chunk.h/c     # Chunk-based storage with compression
-│   ├── udx_words.h/c     # Ordered word container (B-tree wrapper for building)
-│   ├── udx_types.h/c     # Core data types and serialization
-│   ├── udx_utils.h/c     # Utility functions (string folding, I/O)
-│   └── udx_btree.h/c     # B-tree implementation (Joshua J Baker)
-└── include/              # Public headers
+└── src/
+    ├── udx_writer.h/c    # High-level writer API
+    ├── udx_reader.h/c    # High-level reader API
+    ├── udx_chunk.h/c     # Chunk-based storage with compression
+    ├── udx_words.h/c     # Ordered word container (B-tree wrapper for building)
+    ├── udx_types.h/c     # Core data types and serialization
+    ├── udx_utils.h/c     # Utility functions (string folding, I/O)
+    └── udx_btree.h/c     # B-tree implementation (Joshua J Baker)
 ```
 
 ## Design Decisions
@@ -74,12 +42,14 @@ During **write**, entries are added to a dynamic B-tree (`udx_words`) which effi
 
 ### Why Chunks?
 
-Storing data in chunks (up to 64KB each) with independent compression provides:
+A **chunk** is a compressed storage unit containing one or more **data blocks**. Each data block represents the actual content (e.g., dictionary definition) for a specific word or entry.
+
+Storing data in chunks with independent compression provides:
 - Better compression ratios (similar data compresses together)
 - Random access to individual data blocks
 - Memory-efficient reading (only decompress what's needed)
 
-**Limitation**: Individual data blocks must fit within a single chunk (max 64KB). For larger data, split into multiple blocks.
+**Limitation**: Block offset in chunk is limited to 16-bit (0-65535). Each block's start position is guaranteed to be within this range.
 
 ### Case-Insensitive Search
 

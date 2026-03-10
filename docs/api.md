@@ -4,7 +4,6 @@ This document describes the complete API reference for libudx.
 
 ## Table of Contents
 
-- [Error Handling](#error-handling)
 - [Writer APIs](#writer-apis)
   - [File-level Writer API](#file-level-writer-api)
   - [Database Builder API](#database-builder-api)
@@ -15,29 +14,6 @@ This document describes the complete API reference for libudx.
   - [Full Data Lookup](#full-data-lookup)
   - [Iterator](#iterator)
 - [Data Types](#data-types)
-
----
-
-## Error Handling
-
-All functions that can fail use `udx_error_t` return codes:
-
-```c
-typedef enum {
-    UDX_OK                      = 0,    // Success
-    UDX_ERR_INVALID_PARAM       = -1,   // Invalid parameter
-    UDX_ERR_IO                  = -2,   // File I/O error
-    UDX_ERR_BPTREE              = -3,   // B+ tree operation failed
-    UDX_ERR_HEADER              = -4,   // Header read/write failed
-    UDX_ERR_CHUNK               = -5,   // Chunk operation failed
-    UDX_ERR_WORDS               = -6,   // Words container failed
-    UDX_ERR_ACTIVE_DB           = -7,   // Database builder still active
-    UDX_ERR_DUPLICATE_NAME      = -8,   // Duplicate database name
-    UDX_ERR_METADATA            = -9,   // Invalid metadata parameters
-    UDX_ERR_OVERFLOW            = -10,  // Integer/size overflow
-    UDX_ERR_MEMORY              = -11   // Memory allocation failed
-} udx_error_t;
-```
 
 ---
 

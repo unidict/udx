@@ -38,7 +38,7 @@ graph LR
       UDX --> |read|Read
 ```
 
-## Use Cases
+## Use As
 
 - **Standalone Dictionary** — Create self-contained dictionary files with embedded data and indexing. Multi-database support enables storing dictionary definitions enriched with images, audio, and other multimedia content in a single file.
 - **Indexing Engine** — Provide fast custom B+ tree indexing for existing dictionaries in various formats.
@@ -322,7 +322,6 @@ libudx incorporates the following third-party components:
 
 ## See Also
 
-- [Architecture & Design Decisions](docs/architecture.md)
-- [API Documentation](docs/api.md)
 - [UDX Format Specification](docs/format.md)
-- [Examples](examples/) (TODO)
+- [API Documentation](docs/api.md)
+- [Architecture & Design Decisions](docs/architecture.md)

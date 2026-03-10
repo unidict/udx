@@ -43,26 +43,26 @@ All multi-byte integers are stored in **native byte order**.
 A UDX file is organized as follows:
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│ Main Header (16 bytes)                                  │
-├─────────────────────────────────────────────────────────┤
-│ Dictionary Database 1                                   │
-│  ├─ Database Header (44 bytes)                          │
-│  ├─ Metadata (optional, variable size)                  │
-│  ├─ Chunks (compressed data blocks)                     │
-│  ├─ Chunk Table                                         │
-│  └─ B+ Tree Index                                       │
-│     ├─ Leaf Nodes (compressed)                          │
-│     └─ Internal Nodes (compressed)                      │
-├─────────────────────────────────────────────────────────┤
-│ Dictionary Database 2                                   │
-│  └─ ...                                                 │
-├─────────────────────────────────────────────────────────┤
-│ ...                                                     │
-├─────────────────────────────────────────────────────────┤
-│ Dictionary Database Table                               │
-│  └─ [Offset, Name] pairs                                │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│ Main Header (16 bytes)                  │
+├─────────────────────────────────────────┤
+│ Dictionary Database 1                   │
+│  ├─ Database Header (44 bytes)          │
+│  ├─ Metadata (optional, variable size)  │
+│  ├─ Chunks (compressed data blocks)     │
+│  ├─ Chunk Table                         │
+│  └─ B+ Tree Index                       │
+│     ├─ Leaf Nodes (compressed)          │
+│     └─ Internal Nodes (compressed)      │
+├─────────────────────────────────────────┤
+│ Dictionary Database 2                   │
+│  └─ ...                                 │
+├─────────────────────────────────────────┤
+│ ...                                     │
+├─────────────────────────────────────────┤
+│ Dictionary Database Table               │
+│  └─ [Offset, Name] pairs                │
+└─────────────────────────────────────────┘
 ```
 
 ---
@@ -137,7 +137,7 @@ Metadata can contain any application-specific data (e.g., copyright information,
 
 ## Chunk Storage
 
-Data is stored in chunks with independent zlib compression. Each chunk has a maximum size of 64KB (65536 bytes).
+Data is stored in chunks with independent zlib compression.
 
 ### Chunk Format
 
@@ -153,9 +153,8 @@ Each chunk is stored as:
 
 ### Chunk Constraints
 
-- Maximum uncompressed size per chunk: 65536 bytes
-- Each data block must fit entirely within one chunk
-- Chunks are written sequentially after the metadata section
+- **Block offset in chunk**: 16-bit (0-65535), each block's start position is guaranteed to be within this range
+- **Chunk layout**: Chunks are written sequentially after the metadata section
 
 ### Compression Details
 
@@ -177,6 +176,8 @@ The chunk table is stored after all chunks and before the B+ tree index.
 **Total Size:** 8 + (8 × `chunk_count`)
 
 Each offset points to the beginning of a chunk (the `uncompressed_size` field).
+
+**Design Note:** `chunk_count` is stored in the chunk table header (not in db header) to keep the chunk module self-contained. This allows chunk read/write operations to be independent and makes the chunk table format self-describing.
 
 ---
 
@@ -321,9 +322,8 @@ offset = address & 0xFFFF
 ```
 
 **Constraints:**
-- `offset` must be ≤ 65535
+- `offset`: 16-bit (0-65535), block offset in chunk
 - `chunk_index` must be less than chunk count
-- `offset + data_size` must not exceed chunk size
 
 ---
 
@@ -395,8 +395,8 @@ The database header includes a CRC32 checksum for integrity checking.
 
 | Parameter | Maximum Value      | Notes                          |
 |-----------|-------------------|--------------------------------|
-| Chunk size | 65536 bytes     | Uncompressed per chunk        |
-| Data block | 65536 bytes     | Must fit in single chunk       |
+| Block offset in chunk | 65535   | 16-bit, block start position   |
+| Data block | No hard limit   | Start position within 16-bit range |
 | Chunks per DB | 2^32        | ~256 TB theoretical maximum    |
 | Entries per DB | 2^32        | ~4.3 billion unique words      |
 | Items per DB | 2^32         | Total data items               |
