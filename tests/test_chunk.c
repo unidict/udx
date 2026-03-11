@@ -46,7 +46,7 @@ void test_chunk_writer_add_single_block(void) {
     TEST_ASSERT_NOT_NULL(writer);
 
     const uint8_t data[] = "Hello, World!";
-    udx_chunk_address addr = udx_chunk_writer_add_block(writer, data, sizeof(data) - 1);
+    udx_chunk_address addr = udx_chunk_writer_add_block(writer, data, (uint32_t)(sizeof(data) - 1));
     TEST_ASSERT_TRUE_MESSAGE(addr != UDX_INVALID_ADDRESS, "address should be valid");
 
     uint64_t table_offset = udx_chunk_writer_finish(writer);
@@ -71,7 +71,7 @@ void test_chunk_writer_add_multiple_blocks(void) {
     for (int i = 0; i < 10; i++) {
         uint8_t data[128];
         memset(data, i, sizeof(data));
-        udx_chunk_address addr = udx_chunk_writer_add_block(writer, data, sizeof(data));
+        udx_chunk_address addr = udx_chunk_writer_add_block(writer, data, (uint32_t)sizeof(data));
         TEST_ASSERT_TRUE(addr != UDX_INVALID_ADDRESS);
     }
 
@@ -163,7 +163,7 @@ void test_chunk_writer_chunk_overflow(void) {
     memset(data, 0xAA, sizeof(data));
 
     for (int i = 0; i < 5; i++) {
-        udx_chunk_address addr = udx_chunk_writer_add_block(writer, data, sizeof(data));
+        udx_chunk_address addr = udx_chunk_writer_add_block(writer, data, (uint32_t)sizeof(data));
         TEST_ASSERT_TRUE(addr != UDX_INVALID_ADDRESS);
     }
 
@@ -192,7 +192,7 @@ void test_chunk_reader_create(void) {
     FILE* file = fopen(filename, "wb");
     udx_chunk_writer* writer = udx_chunk_writer_open(file);
     uint8_t data[] = "test data";
-    udx_chunk_writer_add_block(writer, data, sizeof(data));
+    udx_chunk_writer_add_block(writer, data, (uint32_t)sizeof(data));
     uint64_t table_offset = udx_chunk_writer_finish(writer);
     udx_chunk_writer_close(writer);
     fclose(file);
@@ -222,7 +222,7 @@ void test_chunk_reader_get_block(void) {
 
     const char* test_str = "Hello, Chunk World!";
     udx_chunk_address addr = udx_chunk_writer_add_block(
-        writer, (const uint8_t*)test_str, strlen(test_str) + 1
+        writer, (const uint8_t*)test_str, (uint32_t)(strlen(test_str) + 1)
     );
     uint64_t table_offset = udx_chunk_writer_finish(writer);
     udx_chunk_writer_close(writer);
@@ -233,7 +233,7 @@ void test_chunk_reader_get_block(void) {
     udx_chunk_reader* reader = udx_chunk_reader_create(file, table_offset);
     TEST_ASSERT_NOT_NULL(reader);
 
-    uint8_t* data = udx_chunk_reader_get_block(reader, addr, strlen(test_str) + 1);
+    uint8_t* data = udx_chunk_reader_get_block(reader, addr, (uint32_t)(strlen(test_str) + 1));
     TEST_ASSERT_NOT_NULL_MESSAGE(data, "data should be read");
     TEST_ASSERT_EQUAL_STRING_MESSAGE(test_str, (const char*)data, "data should match");
 
@@ -256,7 +256,7 @@ void test_chunk_reader_get_chunk_count(void) {
 
     // Add enough data to create multiple chunks
     for (int i = 0; i < 3; i++) {
-        udx_chunk_address addr = udx_chunk_writer_add_block(writer, data, sizeof(data));
+        udx_chunk_address addr = udx_chunk_writer_add_block(writer, data, (uint32_t)sizeof(data));
         TEST_ASSERT_TRUE(addr != UDX_INVALID_ADDRESS);
     }
 
@@ -298,7 +298,7 @@ void test_chunk_roundtrip_binary_data(void) {
         binary_data[i] = (uint8_t)i;
     }
 
-    udx_chunk_address addr = udx_chunk_writer_add_block(writer, binary_data, sizeof(binary_data));
+    udx_chunk_address addr = udx_chunk_writer_add_block(writer, binary_data, (uint32_t)sizeof(binary_data));
     uint64_t table_offset = udx_chunk_writer_finish(writer);
     udx_chunk_writer_close(writer);
     fclose(file);
@@ -307,9 +307,9 @@ void test_chunk_roundtrip_binary_data(void) {
     file = fopen(filename, "rb");
     udx_chunk_reader* reader = udx_chunk_reader_create(file, table_offset);
 
-    uint8_t* read_data = udx_chunk_reader_get_block(reader, addr, sizeof(binary_data));
+    uint8_t* read_data = udx_chunk_reader_get_block(reader, addr, (uint32_t)sizeof(binary_data));
     TEST_ASSERT_NOT_NULL(read_data);
-    TEST_ASSERT_EQUAL_MEMORY_MESSAGE(binary_data, read_data, sizeof(binary_data), "binary data should match");
+    TEST_ASSERT_EQUAL_MEMORY_MESSAGE(binary_data, read_data, (uint32_t)sizeof(binary_data), "binary data should match");
 
     free(read_data);
     udx_chunk_reader_destroy(reader);
@@ -326,7 +326,7 @@ void test_chunk_roundtrip_unicode(void) {
     udx_chunk_writer* writer = udx_chunk_writer_open(file);
 
     const char* unicode_str = "Hello 世界 🌍 Ñoño";
-    size_t len = strlen(unicode_str) + 1;
+    uint32_t len = (uint32_t)(strlen(unicode_str) + 1);
 
     udx_chunk_address addr = udx_chunk_writer_add_block(
         writer, (const uint8_t*)unicode_str, len
