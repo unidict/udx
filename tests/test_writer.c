@@ -7,8 +7,8 @@
 
 #include "unity.h"
 #include "udx_writer.h"
+#include "test_platform.h"
 #include <stdlib.h>
-#include <unistd.h>
 
 // ============================================================
 // Test Cases

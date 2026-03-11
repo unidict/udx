@@ -1,10 +1,10 @@
-# libudx
+# udx
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![C](https://img.shields.io/badge/C-11-blue.svg)](https://en.wikipedia.org/wiki/C11_(C_standard))
-[![CI](https://github.com/kejinlu/libudx/actions/workflows/ci.yml/badge.svg)](https://github.com/kejinlu/libudx/actions/workflows/ci.yml)
+[![CI](https://github.com/kejinlu/udx/actions/workflows/ci.yml/badge.svg)](https://github.com/kejinlu/udx/actions/workflows/ci.yml)
 
-**libudx** — A fast, minimal C library for reading and writing **[UDX (Universal Dictionary eXchange)](docs/format.md)** file.
+**udx** — A fast, minimal C library for reading and writing **[UDX (Universal Dictionary eXchange)](docs/format.md)** file.
 
 ```mermaid
 %%{init: {"flowchart": {"diagramPadding": 150}}}%%
@@ -84,8 +84,8 @@ cmake -B build -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
 
 ```bash
 # Clone the repository
-git clone https://github.com/kejinlu/libudx.git
-cd libudx
+git clone https://github.com/kejinlu/udx.git
+cd udx
 
 # Configure with CMake (requires CMake 3.14 or later)
 mkdir build && cd build
@@ -136,7 +136,7 @@ int main() {
     }
 
     // Create a database builder with optional metadata
-    const char *metadata = "Created by libudx";
+    const char *metadata = "Created by udx";
     udx_db_builder *builder = udx_db_builder_create_with_metadata(
         writer, "english", (const uint8_t *)metadata, strlen(metadata)
     );
@@ -238,7 +238,7 @@ udx_db_iter_destroy(iter);
 
 ## Thread Safety
 
-libudx is **not thread-safe** by design. For concurrent access:
+udx is **not thread-safe** by design. For concurrent access:
 
 **Option 1: Separate reader per thread (recommended)**
 ```c
@@ -288,7 +288,7 @@ Contributions are welcome! Please:
 ```
 MIT License
 
-Copyright (c) 2026 kejinlu <kejinlu@gmail.com> (libudx project)
+Copyright (c) 2026 kejinlu <kejinlu@gmail.com> (udx project)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -311,7 +311,7 @@ SOFTWARE.
 
 ## Acknowledgments
 
-libudx incorporates the following third-party components:
+udx incorporates the following third-party components:
 
 - **[B-tree implementation](https://github.com/tidwall/btree)** by Joshua J Baker (MIT License)
 - **[zlib](https://zlib.net/)** by Jean-loup Gailly and Mark Adler (zlib License)

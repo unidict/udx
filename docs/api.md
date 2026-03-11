@@ -1,6 +1,6 @@
-# libudx API Documentation
+# udx API Documentation
 
-This document describes the complete API reference for libudx.
+This document describes the complete API reference for udx.
 
 ## Table of Contents
 

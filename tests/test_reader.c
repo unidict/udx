@@ -8,8 +8,8 @@
 #include "unity.h"
 #include "udx_reader.h"
 #include "udx_writer.h"
+#include "test_platform.h"
 #include <stdlib.h>
-#include <unistd.h>
 
 // Helper to create a simple test file
 static void create_test_file(void) {

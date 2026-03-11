@@ -1,6 +1,6 @@
-# libudx Architecture
+# udx Architecture
 
-This document describes the internal architecture and design decisions of libudx.
+This document describes the internal architecture and design decisions of udx.
 
 ## Key Design Points
 
@@ -12,7 +12,7 @@ This document describes the internal architecture and design decisions of libudx
 ## Architecture
 
 ```
-libudx/
+udx/
 └── src/
     ├── udx_writer.h/c    # High-level writer API
     ├── udx_reader.h/c    # High-level reader API
@@ -125,7 +125,7 @@ B+ trees provide predictable O(log n) performance for lookups and naturally supp
 
 ### Why Two Different Tree Structures?
 
-libudx uses **two different tree structures** for different purposes:
+udx uses **two different tree structures** for different purposes:
 
 | Tree Type | Used By | Purpose |
 |-----------|---------|---------|

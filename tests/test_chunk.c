@@ -7,9 +7,9 @@
 
 #include "unity.h"
 #include "udx_chunk.h"
+#include "test_platform.h"
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 // ============================================================
 // Writer Tests
