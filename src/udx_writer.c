@@ -697,3 +697,29 @@ udx_error_t udx_db_builder_add_entry(udx_db_builder *builder,
 
     return udx_words_add(builder->words, word, address, data_size) ? UDX_OK : UDX_ERR_WORDS;
 }
+
+udx_chunk_address udx_db_builder_add_chunk_block(udx_db_builder *builder,
+                                                  const uint8_t *data,
+                                                  uint32_t data_size) {
+    if (builder == NULL || data == NULL) {
+        return UDX_INVALID_ADDRESS;
+    }
+
+    return udx_chunk_writer_add_block(builder->chunk_writer, data, data_size);
+}
+
+udx_error_t udx_db_builder_add_word_entry(udx_db_builder *builder,
+                                          const char *word,
+                                          udx_chunk_address data_address,
+                                          uint32_t data_size) {
+    if (builder == NULL || word == NULL) {
+        return UDX_ERR_INVALID_PARAM;
+    }
+
+    if (data_address == UDX_INVALID_ADDRESS) {
+        return UDX_ERR_INVALID_PARAM;
+    }
+
+    return udx_words_add(builder->words, word, data_address, data_size) ? UDX_OK : UDX_ERR_WORDS;
+}
+
