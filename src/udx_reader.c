@@ -36,6 +36,12 @@ struct udx_db {
 };
 
 // ============================================================
+// Constants
+// ============================================================
+
+#define UDX_INDEX_NODE_MAX_SIZE (1024 * 1024)  // Max 1MB for index nodes
+
+// ============================================================
 // B+ Tree Node Structure (zero-copy parsing)
 // ============================================================
 
@@ -93,7 +99,6 @@ static udx_index_node *read_index_node(udx_db *db, uint64_t offset) {
     }
 
     // Sanity check: reject obviously invalid sizes (max 1MB for index nodes)
-    #define UDX_INDEX_NODE_MAX_SIZE (1024 * 1024)
     if (uncompressed_size == 0 || uncompressed_size > UDX_INDEX_NODE_MAX_SIZE ||
         compressed_size == 0 || compressed_size > UDX_INDEX_NODE_MAX_SIZE) {
         return NULL;
@@ -129,8 +134,14 @@ static udx_index_node *read_index_node(udx_db *db, uint64_t offset) {
         return NULL;
     }
 
-    // First byte of node data is the type
-    node->type = data[0];
+    // First byte of node data is the type; validate before use
+    node->type = (udx_index_node_type)data[0];
+    if (node->type != UDX_INDEX_NODE_TYPE_INTERNAL &&
+        node->type != UDX_INDEX_NODE_TYPE_LEAF) {
+        free(data);
+        free(node);
+        return NULL;
+    }
     node->data = data;
     node->size = uncompressed_size;
 
@@ -936,6 +947,13 @@ udx_reader *udx_reader_open(const char *path) {
         return NULL;
     }
 
+    // Validate version: major must match exactly; minor is backward-compatible
+    if (reader->header.version_major != UDX_VERSION_MAJOR) {
+        fclose(reader->file);
+        free(reader);
+        return NULL;
+    }
+
     // Read db table (offsets and names)
     // Format: [count:u32] [(offset:u64, name: null-terminated string)] × count
     uint64_t table_offset = reader->header.db_table_offset;
@@ -974,23 +992,30 @@ udx_reader *udx_reader_open(const char *path) {
             break;
         }
 
-        // Read name (null-terminated string)
-        char buffer[256];  // Reasonable max name length
-        size_t pos = 0;
-        int ch;
-        while ((ch = fgetc(reader->file)) != EOF && ch != '\0') {
-            if (pos < sizeof(buffer) - 1) {
-                buffer[pos++] = (char)ch;
-            }
-        }
-        buffer[pos] = '\0';
-
-        // Duplicate the name
-        names[i] = strdup(buffer);
-        if (names[i] == NULL) {
+        // Read name (null-terminated string) with dynamic buffer
+        size_t cap = 64, pos = 0;
+        char *name_buf = (char *)malloc(cap);
+        if (name_buf == NULL) {
             success = false;
             break;
         }
+        int ch;
+        while ((ch = fgetc(reader->file)) != EOF && ch != '\0') {
+            if (pos + 1 >= cap) {
+                cap *= 2;
+                char *tmp = (char *)realloc(name_buf, cap);
+                if (tmp == NULL) {
+                    free(name_buf);
+                    success = false;
+                    break;
+                }
+                name_buf = tmp;
+            }
+            name_buf[pos++] = (char)ch;
+        }
+        if (!success) break;
+        name_buf[pos] = '\0';
+        names[i] = name_buf;
     }
 
     if (!success) {

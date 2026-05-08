@@ -25,21 +25,6 @@ struct udx_words{
 // ============================================================
 
 /**
- * Duplicate a string
- */
-static char *str_dup(const char *str) {
-    if (str == NULL) {
-        return NULL;
-    }
-    size_t len = strlen(str) + 1;
-    char *dup = (char *)malloc(len);
-    if (dup) {
-        memcpy(dup, str, len);
-    }
-    return dup;
-}
-
-/**
  * btree comparison function (compares folded words)
  */
 static int entry_compare(const void *a, const void *b, void *udata) {
@@ -119,7 +104,7 @@ bool udx_words_add(udx_words *words,
     if (existing) {
         // Already exists, append item
         udx_index_entry_item item;
-        item.original_word = str_dup(word);
+        item.original_word = udx_str_dup(word);
         if (item.original_word == NULL) {
             free(folded);
             return false;
@@ -142,7 +127,7 @@ bool udx_words_add(udx_words *words,
 
         // Create first item with original word
         udx_index_entry_item item;
-        item.original_word = str_dup(word);
+        item.original_word = udx_str_dup(word);
         if (item.original_word == NULL) {
             free(folded);
             return false;

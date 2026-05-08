@@ -274,7 +274,7 @@ static uint64_t build_bptree_node(bptree_build_context *ctx, size_t index_size, 
         // Record separator key: peek at iterator's current position
         const udx_index_entry *next_entry = udx_words_iter_peek(ctx->iter);
         if (next_entry == NULL) goto cleanup;
-        keys[x] = strdup(next_entry->word);
+        keys[x] = udx_str_dup(next_entry->word);
         if (keys[x] == NULL) goto cleanup;
 
         prev_entry = cur_entry;
@@ -555,7 +555,7 @@ udx_db_builder *udx_db_builder_create_with_metadata(udx_writer *writer,
     }
 
     // Record name and offset in writer
-    char *name_copy = strdup(name);
+    char *name_copy = udx_str_dup(name);
     if (name_copy == NULL) {
         goto error;
     }

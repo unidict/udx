@@ -10,6 +10,18 @@
 #include <stdlib.h>
 #include <string.h>
 
+char *udx_str_dup(const char *str) {
+    if (str == NULL) {
+        return NULL;
+    }
+    size_t len = strlen(str) + 1;
+    char *dup = (char *)malloc(len);
+    if (dup) {
+        memcpy(dup, str, len);
+    }
+    return dup;
+}
+
 char *udx_fold_string(const char *str) {
     if (str == NULL) {
         return NULL;

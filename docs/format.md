@@ -287,15 +287,23 @@ function lookup(key):
 ## Dictionary Database Table
 
 The dictionary database table is stored at the end of the file (offset specified in main header).
+The number of entries `N` is given by `db_count` in the main header.
 
-| Offset | Size    | Type   | Field        | Description                          |
-|--------|---------|--------|--------------|--------------------------------------|
-| 0      | 8×N     | uint64 | `offsets[]`  | File offsets of each DB header       |
-| 8×N    | variable | char   | `names[]`    | Database names (null-terminated)     |
+Each entry is an `(offset, name)` pair stored consecutively:
 
-**Total Size:** (8 × N) + sum of all name lengths + N
+| Offset (relative to entry start) | Size     | Type   | Field     | Description                    |
+|-----------------------------------|----------|--------|-----------|--------------------------------|
+| 0                                 | 8        | uint64 | `offset`  | File offset of this DB header  |
+| 8                                 | variable | char   | `name`    | DB name (null-terminated UTF-8)|
 
-Each name is a null-terminated UTF-8 string. Names are stored consecutively without padding.
+Entries are written one after another without padding:
+```
+[offset_0:u64] [name_0\0] [offset_1:u64] [name_1\0] ... [offset_N-1:u64] [name_N-1\0]
+```
+
+**Total Size:** N × 8 + sum of all name lengths (including null terminators)
+
+Each name is a null-terminated UTF-8 string.
 
 ---
 
@@ -304,26 +312,29 @@ Each name is a null-terminated UTF-8 string. Names are stored consecutively with
 Data addresses are 64-bit values encoding both chunk location and offset.
 
 ```
-┌─────────────────────────────────┬─────────────────────┐
-│ Chunk Index (48 bits)           │ Offset (16 bits)    │
-│   Max: 281 TB                   │   Max: 64 KB        │
-└─────────────────────────────────┴─────────────────────┘
+┌──────────────────┬──────────────────────────────┬─────────────────────┐
+│ Reserved (16 bits│ Chunk Index (32 bits)         │ Offset (16 bits)    │
+│ always 0)        │   Max: ~256 TB                │   Max: 64 KB        │
+└──────────────────┴──────────────────────────────┴─────────────────────┘
 ```
 
 **Encoding:**
 ```c
-address = (chunk_index << 16) | offset
+address = ((uint64_t)chunk_index << 16) | offset
+// chunk_index: uint32_t (0 – 4,294,967,295)
+// offset:      uint16_t (0 – 65,535)
 ```
 
 **Decoding:**
 ```c
-chunk_index = address >> 16
-offset = address & 0xFFFF
+chunk_index = (uint32_t)(address >> 16)   // bits 16–47
+offset      = (uint16_t)(address & 0xFFFF) // bits 0–15
 ```
 
 **Constraints:**
-- `offset`: 16-bit (0-65535), block offset in chunk
-- `chunk_index` must be less than chunk count
+- `offset`: 16-bit (0–65535), block start position within the decompressed chunk
+- `chunk_index`: 32-bit (0–4,294,967,295), must be less than chunk count
+- The high 16 bits (bits 48–63) are reserved and must be zero
 
 ---
 
@@ -397,7 +408,7 @@ The database header includes a CRC32 checksum for integrity checking.
 |-----------|-------------------|--------------------------------|
 | Block offset in chunk | 65535   | 16-bit, block start position   |
 | Data block | No hard limit   | Start position within 16-bit range |
-| Chunks per DB | 2^32        | ~256 TB theoretical maximum    |
+| Chunks per DB | 2^32        | 32-bit chunk index, ~256 TB theoretical maximum |
 | Entries per DB | 2^32        | ~4.3 billion unique words      |
 | Items per DB | 2^32         | Total data items               |
 | Items per entry | 2^16      | Items for a single word        |
@@ -441,14 +452,24 @@ if (memcmp(header.magic, "UDX\0", 4) != 0) {
 }
 
 // 3. Read database table
+// db_count comes from the main header (no count stored in the table itself)
+uint16_t db_count = header.db_count;
 fseek(file, header.db_table_offset, SEEK_SET);
-uint64_t db_count;
-fread(&db_count, sizeof(uint64_t), 1, file);
 
-// 4. Read each database
-for (uint64_t i = 0; i < db_count; i++) {
+// 4. Read each (offset, name) entry
+for (uint16_t i = 0; i < db_count; i++) {
+    // Read DB header offset
     uint64_t offset;
     fread(&offset, sizeof(uint64_t), 1, file);
+
+    // Read null-terminated DB name
+    char name[256];
+    size_t pos = 0;
+    int ch;
+    while ((ch = fgetc(file)) != EOF && ch != '\0') {
+        if (pos < sizeof(name) - 1) name[pos++] = (char)ch;
+    }
+    name[pos] = '\0';
 
     // Seek to database header and load...
 }
@@ -461,3 +482,4 @@ for (uint64_t i = 0; i < db_count; i++) {
 | Version | Date       | Changes                              |
 |---------|-----------|--------------------------------------|
 | 1.0     | 2026-03-05 | Initial specification                |
+| 1.0.1   | 2026-05-08 | Fix address encoding diagram (chunk index is 32-bit, not 48-bit); fix DB table layout description (interleaved offset+name pairs, not separated blocks); fix example code (db_count comes from main header, not DB table) |

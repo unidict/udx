@@ -20,6 +20,13 @@ extern "C" {
 // ============================================================
 
 /**
+ * Duplicate a string (ISO C11 compatible alternative to strdup)
+ * @param str Input string (NULL returns NULL)
+ * @return Newly allocated copy (caller must free), or NULL on failure
+ */
+char *udx_str_dup(const char *str);
+
+/**
  * Fold string to lowercase for case-insensitive comparison
  * @param str Input string (NULL returns NULL)
  * @return Newly allocated lowercase string (caller must free), or NULL on failure

@@ -396,7 +396,8 @@ uint8_t *udx_chunk_reader_get_block(udx_chunk_reader *reader,
     }
 
     // Validate offset + data_size within chunk bounds
-    if (offset + data_size > reader->cached_size) {
+    // Cast to uint64_t first to avoid uint16_t + uint32_t wrapping
+    if ((uint64_t)offset + data_size > reader->cached_size) {
         return NULL;
     }
 
