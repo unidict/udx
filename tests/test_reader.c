@@ -92,7 +92,7 @@ void test_reader_lookup(void) {
     TEST_ASSERT_NOT_NULL(db);
 
     // Case-insensitive lookup: "hello" should match both "hello" and "Hello"
-    udx_db_data_entry* entry = udx_db_lookup(db, "hello");
+    udx_db_value_entry* entry = udx_db_lookup(db, "hello");
     TEST_ASSERT_NOT_NULL_MESSAGE(entry, "entry should be found");
 
     // Should have 2 items (one for "hello"->"world", one for "Hello"->"WORLD")
@@ -108,7 +108,7 @@ void test_reader_lookup(void) {
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(5, entry->items.data[1].size, "second data should be 5 bytes");
     TEST_ASSERT_EQUAL_STRING_LEN_MESSAGE("WORLD", (char*)entry->items.data[1].data, 5, "second data should be 'WORLD'");
 
-    udx_data_entry_free(entry);
+    udx_value_entry_free(entry);
     udx_db_close(db);
     udx_reader_close(reader);
     unlink("test_reader.udx");
@@ -158,7 +158,7 @@ void test_reader_iterator(void) {
     TEST_ASSERT_NOT_NULL(iter);
 
     // Should iterate through all 2 unique words: "hello" (with 2 items) and "test" (with 1 item)
-    const udx_db_data_entry* entry;
+    const udx_db_value_entry* entry;
 
     // First entry: "hello" with 2 items
     entry = udx_db_iter_next(iter);
@@ -192,9 +192,9 @@ void test_reader_case_insensitive(void) {
     TEST_ASSERT_NOT_NULL(db);
 
     // All case variations should return the same results (both "hello" and "Hello" items)
-    udx_db_data_entry* e1 = udx_db_lookup(db, "hello");
-    udx_db_data_entry* e2 = udx_db_lookup(db, "HELLO");
-    udx_db_data_entry* e3 = udx_db_lookup(db, "HeLLo");
+    udx_db_value_entry* e1 = udx_db_lookup(db, "hello");
+    udx_db_value_entry* e2 = udx_db_lookup(db, "HELLO");
+    udx_db_value_entry* e3 = udx_db_lookup(db, "HeLLo");
 
     TEST_ASSERT_NOT_NULL(e1);
     TEST_ASSERT_NOT_NULL(e2);
@@ -215,9 +215,9 @@ void test_reader_case_insensitive(void) {
     TEST_ASSERT_EQUAL_STRING_LEN_MESSAGE("WORLD", (char*)e2->items.data[1].data, 5, "second item data should be 'WORLD'");
     TEST_ASSERT_EQUAL_STRING_LEN_MESSAGE("WORLD", (char*)e3->items.data[1].data, 5, "second item data should be 'WORLD'");
 
-    udx_data_entry_free(e1);
-    udx_data_entry_free(e2);
-    udx_data_entry_free(e3);
+    udx_value_entry_free(e1);
+    udx_value_entry_free(e2);
+    udx_value_entry_free(e3);
     udx_db_close(db);
     udx_reader_close(reader);
     unlink("test_reader.udx");

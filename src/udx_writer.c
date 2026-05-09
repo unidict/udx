@@ -120,7 +120,7 @@ static size_t serialize_index_entry_into(const udx_db_key_entry *entry,
     size_t items_size = 0;
     for (size_t i = 0; i < entry->items.size; i++) {
         items_size += strlen(entry->items.data[i].original_key) + 1;
-        items_size += sizeof(udx_data_address);
+        items_size += sizeof(udx_value_address);
         items_size += sizeof(uint32_t);  // data_size
     }
     size_t total_size = key_len + sizeof(uint16_t) + items_size;
@@ -154,8 +154,8 @@ static size_t serialize_index_entry_into(const udx_db_key_entry *entry,
         size_t original_len = strlen(item->original_key) + 1;
         memcpy(ptr, item->original_key, original_len);
         ptr += original_len;
-        memcpy(ptr, &item->data_address, sizeof(udx_data_address));
-        ptr += sizeof(udx_data_address);
+        memcpy(ptr, &item->value_address, sizeof(udx_value_address));
+        ptr += sizeof(udx_value_address);
         memcpy(ptr, &item->data_size, sizeof(uint32_t));
         ptr += sizeof(uint32_t);
     }
@@ -692,13 +692,13 @@ udx_error_t udx_db_builder_add_entry(udx_db_builder *builder,
         return UDX_ERR_INVALID_PARAM;
     }
 
-    udx_data_address address = udx_chunk_writer_add_block(builder->chunk_writer, data, data_size);
+    udx_value_address address = udx_chunk_writer_add_block(builder->chunk_writer, data, data_size);
     if (address == UDX_INVALID_ADDRESS) return UDX_ERR_CHUNK;
 
     return udx_keys_add(builder->keys, key, address, data_size) ? UDX_OK : UDX_ERR_KEYS;
 }
 
-udx_data_address udx_db_builder_add_data(udx_db_builder *builder,
+udx_value_address udx_db_builder_add_value(udx_db_builder *builder,
                                                   const uint8_t *data,
                                                   uint32_t data_size) {
     if (builder == NULL || data == NULL) {
@@ -710,16 +710,16 @@ udx_data_address udx_db_builder_add_data(udx_db_builder *builder,
 
 udx_error_t udx_db_builder_add_key_entry(udx_db_builder *builder,
                                           const char *key,
-                                          udx_data_address data_address,
+                                          udx_value_address value_address,
                                           uint32_t data_size) {
     if (builder == NULL || key == NULL) {
         return UDX_ERR_INVALID_PARAM;
     }
 
-    if (data_address == UDX_INVALID_ADDRESS) {
+    if (value_address == UDX_INVALID_ADDRESS) {
         return UDX_ERR_INVALID_PARAM;
     }
 
-    return udx_keys_add(builder->keys, key, data_address, data_size) ? UDX_OK : UDX_ERR_KEYS;
+    return udx_keys_add(builder->keys, key, value_address, data_size) ? UDX_OK : UDX_ERR_KEYS;
 }
 

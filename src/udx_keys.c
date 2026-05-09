@@ -80,7 +80,7 @@ void udx_keys_destroy(udx_keys *keys) {
 
 bool udx_keys_add(udx_keys *keys,
                           const char *key,
-                          udx_data_address data_address,
+                          udx_value_address value_address,
                           uint32_t data_size) {
     if (keys == NULL || key == NULL) {
         return false;
@@ -109,7 +109,7 @@ bool udx_keys_add(udx_keys *keys,
             free(folded);
             return false;
         }
-        item.data_address = data_address;
+        item.value_address = value_address;
         item.data_size = data_size;
 
         if (!udx_key_entry_item_array_push(&existing->items, item)) {
@@ -132,7 +132,7 @@ bool udx_keys_add(udx_keys *keys,
             free(folded);
             return false;
         }
-        item.data_address = data_address;
+        item.value_address = value_address;
         item.data_size = data_size;
         if (!udx_key_entry_item_array_push(&new_entry.items, item)) {
             free(item.original_key);

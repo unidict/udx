@@ -19,17 +19,17 @@
 // Make address from chunk_index and offset
 // chunk_index: 32-bit (0-4.29 billion), max 256 TB with 64KB chunks
 // offset: 16-bit (0-65535), max 64KB per chunk
-static inline udx_data_address udx_addr_make(uint32_t chunk_index, uint16_t offset) {
+static inline udx_value_address udx_addr_make(uint32_t chunk_index, uint16_t offset) {
     return ((uint64_t)chunk_index << 16) | offset;
 }
 
 // Get chunk_index from address
-static inline uint32_t udx_addr_get_chunk(udx_data_address addr) {
+static inline uint32_t udx_addr_get_chunk(udx_value_address addr) {
     return (uint32_t)(addr >> 16);
 }
 
 // Get offset from address (same for both formats)
-static inline uint16_t udx_addr_get_offset(udx_data_address addr) {
+static inline uint16_t udx_addr_get_offset(udx_value_address addr) {
     return (uint16_t)(addr & 0xFFFF);
 }
 
@@ -161,7 +161,7 @@ udx_chunk_writer *udx_chunk_writer_open(FILE *file) {
     return writer;
 }
 
-udx_data_address udx_chunk_writer_add_block(udx_chunk_writer *writer,
+udx_value_address udx_chunk_writer_add_block(udx_chunk_writer *writer,
                                               const uint8_t *data,
                                               uint32_t size) {
     if (writer == NULL || data == NULL || size == 0) {
@@ -193,7 +193,7 @@ udx_data_address udx_chunk_writer_add_block(udx_chunk_writer *writer,
 
     // Record address before appending
     // buffer_size is guaranteed < UDX_CHUNK_MAX_SIZE after flush check
-    udx_data_address address = udx_addr_make(writer->current_chunk_index,
+    udx_value_address address = udx_addr_make(writer->current_chunk_index,
                                                (uint16_t)writer->buffer_size);
 
     // Append data
@@ -381,7 +381,7 @@ static bool chunk_reader_load_chunk(udx_chunk_reader *reader, uint64_t chunk_ind
 }
 
 uint8_t *udx_chunk_reader_get_block(udx_chunk_reader *reader,
-                                    udx_data_address address,
+                                    udx_value_address address,
                                     uint32_t data_size) {
     if (reader == NULL || data_size == 0) {
         return NULL;

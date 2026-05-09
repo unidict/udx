@@ -299,10 +299,10 @@ static size_t parse_entry(const uint8_t *data, size_t available, udx_db_key_entr
         for (uint16_t i = 0; i < item_count; i++) {
             // original_key
             size_t original_len = strlen((const char *)ptr) + 1;
-            if (ptr + original_len + sizeof(udx_data_address) + sizeof(uint32_t) > end) return 0;
+            if (ptr + original_len + sizeof(udx_value_address) + sizeof(uint32_t) > end) return 0;
             ptr += original_len;
             // address
-            ptr += sizeof(udx_data_address);
+            ptr += sizeof(udx_value_address);
             // data_size
             ptr += sizeof(uint32_t);
         }
@@ -331,7 +331,7 @@ static size_t parse_entry(const uint8_t *data, size_t available, udx_db_key_entr
             // original_key
             const char *original_key = (const char *)ptr;
             size_t original_len = strlen(original_key) + 1;
-            if (ptr + original_len + sizeof(udx_data_address) + sizeof(uint32_t) > end) {
+            if (ptr + original_len + sizeof(udx_value_address) + sizeof(uint32_t) > end) {
                 udx_key_entry_free_contents(entry);
                 free(entry);
                 return 0;
@@ -345,9 +345,9 @@ static size_t parse_entry(const uint8_t *data, size_t available, udx_db_key_entr
             ptr += original_len;
 
             // address
-            udx_data_address address;
-            memcpy(&address, ptr, sizeof(udx_data_address));
-            ptr += sizeof(udx_data_address);
+            udx_value_address address;
+            memcpy(&address, ptr, sizeof(udx_value_address));
+            ptr += sizeof(udx_value_address);
 
             // data_size
             uint32_t data_size;
@@ -357,7 +357,7 @@ static size_t parse_entry(const uint8_t *data, size_t available, udx_db_key_entr
             // Add item
             udx_key_entry_item item;
             item.original_key = original_copy;
-            item.data_address = address;
+            item.value_address = address;
             item.data_size = data_size;
             udx_key_entry_item_array_push(&entry->items, item);
         }
@@ -412,13 +412,13 @@ static const uint8_t *search_leaf_node(const udx_index_node *node,
         for (uint16_t j = 0; j < item_count; j++) {
             // original_key
             size_t original_len = strlen((const char *)current) + 1;
-            if (current + original_len + sizeof(udx_data_address) + sizeof(uint32_t) > node_end) {
+            if (current + original_len + sizeof(udx_value_address) + sizeof(uint32_t) > node_end) {
                 free(entry_offsets); return NULL;
             }
             current += original_len;
 
             // address + data_size
-            current += sizeof(udx_data_address);
+            current += sizeof(udx_value_address);
             current += sizeof(uint32_t);
         }
     }
@@ -780,37 +780,37 @@ cleanup:
 /**
  * Internal helper: get data by address and size
  */
-static uint8_t *udx_db_get_data(udx_db *db, udx_data_address address, uint32_t data_size) {
+static uint8_t *udx_db_get_data(udx_db *db, udx_value_address address, uint32_t data_size) {
     if (db == NULL || db->chunk_reader == NULL) return NULL;
     return udx_chunk_reader_get_block(db->chunk_reader, address, data_size);
 }
 
 /**
- * Convert udx_db_key_entry to udx_db_data_entry
+ * Convert udx_db_key_entry to udx_db_value_entry
  * Loads all items for the key
  */
-udx_db_data_entry *udx_db_load_data(udx_db *db, const udx_db_key_entry *key_entry) {
+udx_db_value_entry *udx_db_load_data(udx_db *db, const udx_db_key_entry *key_entry) {
     if (key_entry == NULL || key_entry->items.size == 0) {
         return NULL;
     }
 
-    udx_db_data_entry *data_entry = (udx_db_data_entry *)calloc(1, sizeof(udx_db_data_entry));
-    if (data_entry == NULL) {
+    udx_db_value_entry *value_entry = (udx_db_value_entry *)calloc(1, sizeof(udx_db_value_entry));
+    if (value_entry == NULL) {
         return NULL;
     }
 
-    data_entry->key = strdup(key_entry->key);
-    if (data_entry->key == NULL) {
-        free(data_entry);
+    value_entry->key = strdup(key_entry->key);
+    if (value_entry->key == NULL) {
+        free(value_entry);
         return NULL;
     }
 
-    udx_data_entry_item_array_init(&data_entry->items);
+    udx_value_entry_item_array_init(&value_entry->items);
 
     // Reserve space for all items
-    if (!udx_data_entry_item_array_reserve(&data_entry->items, key_entry->items.size)) {
-        udx_data_entry_free_contents(data_entry);
-        free(data_entry);
+    if (!udx_value_entry_item_array_reserve(&value_entry->items, key_entry->items.size)) {
+        udx_value_entry_free_contents(value_entry);
+        free(value_entry);
         return NULL;
     }
 
@@ -818,33 +818,33 @@ udx_db_data_entry *udx_db_load_data(udx_db *db, const udx_db_key_entry *key_entr
     for (size_t i = 0; i < key_entry->items.size; i++) {
         udx_key_entry_item *src = &key_entry->items.data[i];
 
-        udx_data_entry_item item;
+        udx_value_entry_item item;
         item.original_key = strdup(src->original_key);
         if (item.original_key == NULL) {
-            udx_data_entry_free_contents(data_entry);
-            free(data_entry);
+            udx_value_entry_free_contents(value_entry);
+            free(value_entry);
             return NULL;
         }
 
-        item.data = udx_db_get_data(db, src->data_address, src->data_size);
+        item.data = udx_db_get_data(db, src->value_address, src->data_size);
         item.size = src->data_size;
 
         if (item.data == NULL) {
             free(item.original_key);
-            udx_data_entry_free_contents(data_entry);
-            free(data_entry);
+            udx_value_entry_free_contents(value_entry);
+            free(value_entry);
             return NULL;
         }
 
         // Push the item (ownership transferred)
-        data_entry->items.data[i] = item;
-        data_entry->items.size++;
+        value_entry->items.data[i] = item;
+        value_entry->items.size++;
     }
 
-    return data_entry;
+    return value_entry;
 }
 
-udx_db_data_entry *udx_db_lookup(udx_db *db, const char *key) {
+udx_db_value_entry *udx_db_lookup(udx_db *db, const char *key) {
     if (db == NULL || key == NULL) {
         return NULL;
     }
@@ -856,12 +856,12 @@ udx_db_data_entry *udx_db_lookup(udx_db *db, const char *key) {
     }
 
     // Convert to data entry
-    udx_db_data_entry *data_entry = udx_db_load_data(db, key_entry);
+    udx_db_value_entry *value_entry = udx_db_load_data(db, key_entry);
 
     // Free key_entry
     udx_key_entry_free(key_entry);
 
-    return data_entry;
+    return value_entry;
 }
 
 // ============================================================
@@ -1070,7 +1070,7 @@ struct udx_db_iter {
     const uint8_t *current_ptr;   // Current entry data pointer
 
     // Current entry (returned to caller)
-    udx_db_data_entry current_entry;
+    udx_db_value_entry current_entry;
 };
 
 udx_db_iter *udx_db_iter_create(udx_db *db) {
@@ -1080,7 +1080,7 @@ udx_db_iter *udx_db_iter_create(udx_db *db) {
     if (iter == NULL) return NULL;
 
     iter->db = db;
-    udx_data_entry_item_array_init(&iter->current_entry.items);
+    udx_value_entry_item_array_init(&iter->current_entry.items);
     iter->current_entry.key = NULL;
 
     // Read first leaf node
@@ -1111,18 +1111,18 @@ udx_db_iter *udx_db_iter_create(udx_db *db) {
 void udx_db_iter_destroy(udx_db_iter *iter) {
     if (iter == NULL) return;
 
-    udx_data_entry_free_contents(&iter->current_entry);
+    udx_value_entry_free_contents(&iter->current_entry);
     free_node(iter->leaf_node);
     free(iter);
 }
 
-const udx_db_data_entry *udx_db_iter_next(udx_db_iter *iter) {
+const udx_db_value_entry *udx_db_iter_next(udx_db_iter *iter) {
     if (iter == NULL) return NULL;
 
     // Free previous entry
-    udx_data_entry_free_contents(&iter->current_entry);
+    udx_value_entry_free_contents(&iter->current_entry);
     iter->current_entry.key = NULL;
-    udx_data_entry_item_array_init(&iter->current_entry.items);
+    udx_value_entry_item_array_init(&iter->current_entry.items);
 
     // Traverse until we find the next entry
     while (true) {
@@ -1143,19 +1143,19 @@ const udx_db_data_entry *udx_db_iter_next(udx_db_iter *iter) {
             iter->current_index++;
 
             // Convert to data entry
-            udx_db_data_entry *data_entry = udx_db_load_data(iter->db, key_entry);
+            udx_db_value_entry *value_entry = udx_db_load_data(iter->db, key_entry);
 
             // Free the key entry (udx_db_load_data copies contents, so we own everything)
             udx_key_entry_free(key_entry);
 
-            if (data_entry == NULL) {
+            if (value_entry == NULL) {
                 return NULL;
             }
 
-            // Move data_entry contents to iter->current_entry
-            iter->current_entry.key = data_entry->key;
-            iter->current_entry.items = data_entry->items;
-            free(data_entry);  // Free wrapper, contents now owned by current_entry
+            // Move value_entry contents to iter->current_entry
+            iter->current_entry.key = value_entry->key;
+            iter->current_entry.items = value_entry->items;
+            free(value_entry);  // Free wrapper, contents now owned by current_entry
 
             return &iter->current_entry;
         }

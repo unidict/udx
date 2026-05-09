@@ -118,7 +118,7 @@ udx_error_t udx_db_builder_finalize(udx_db_builder *builder);
  * Do NOT use this function when:
  * - Multiple keys need to reference the same data (e.g., key alternates)
  * - You need to add multiple keys pointing to identical data
- * - In these cases, use udx_db_builder_add_data + udx_db_builder_add_key_entry instead
+ * - In these cases, use udx_db_builder_add_value + udx_db_builder_add_key_entry instead
  *
  * Example:
  * @code
@@ -136,7 +136,7 @@ udx_error_t udx_db_builder_add_entry(udx_db_builder *builder,
  * @param builder Builder pointer
  * @param data Data bytes
  * @param data_size Size of data in bytes (maximum: 4 GB, recommended: < 64 KB)
- * @return Data address on success, UDX_INVALID_ADDRESS on failure
+ * @return Value address on success, UDX_INVALID_ADDRESS on failure
  *
  * @note This function only writes data to chunk storage
  * @note Use udx_db_builder_add_key_entry to add key references to this chunk
@@ -156,7 +156,7 @@ udx_error_t udx_db_builder_add_entry(udx_db_builder *builder,
  * Example (adding key with alternates):
  * @code
  *   // Store definition data once
- *   udx_data_address addr = udx_db_builder_add_data(builder, def_data, def_size);
+ *   udx_value_address addr = udx_db_builder_add_value(builder, def_data, def_size);
  *
  *   // Add main key
  *   udx_db_builder_add_key_entry(builder, "colour", addr, def_size);
@@ -165,7 +165,7 @@ udx_error_t udx_db_builder_add_entry(udx_db_builder *builder,
  *   udx_db_builder_add_key_entry(builder, "color", addr, def_size);
  * @endcode
  */
-udx_data_address udx_db_builder_add_data(udx_db_builder *builder,
+udx_value_address udx_db_builder_add_value(udx_db_builder *builder,
                                                   const uint8_t *data,
                                                   uint32_t data_size);
 
@@ -173,27 +173,27 @@ udx_data_address udx_db_builder_add_data(udx_db_builder *builder,
  * @brief Add key entry referencing existing chunk data
  * @param builder Builder pointer
  * @param key Key string (UTF-8, will be folded for case-insensitive lookup)
- * @param data_address Address of data in chunk storage (from udx_db_builder_add_data)
+ * @param value_address Address of data in chunk storage (from udx_db_builder_add_value)
  * @param data_size Size of data in bytes
  * @return UDX_OK on success, error code on failure:
  *         UDX_ERR_INVALID_PARAM: invalid parameter
  *         UDX_ERR_KEYS: keys container failed
  *
  * @note This function only adds key->address mapping to index
- * @note Use udx_db_builder_add_data first to store data
- * @note Multiple keys can reference the same data_address (for alternates)
+ * @note Use udx_db_builder_add_value first to store data
+ * @note Multiple keys can reference the same value_address (for alternates)
  *
  * === When to use ===
- * This function must be used together with udx_db_builder_add_data:
- * - After calling udx_db_builder_add_data to store data
+ * This function must be used together with udx_db_builder_add_value:
+ * - After calling udx_db_builder_add_value to store data
  * - To add multiple keys referencing the same data
  * - To implement key alternates, synonyms, or spelling variants
  *
  * === When NOT to use ===
  * Do NOT use this function when:
- * - You haven't called udx_db_builder_add_data first
+ * - You haven't called udx_db_builder_add_value first
  * - You have a simple one-key-to-one-data mapping (use udx_db_builder_add_entry instead)
- * - The data_address is invalid or UDX_INVALID_ADDRESS
+ * - The value_address is invalid or UDX_INVALID_ADDRESS
  *
  * Example (BGL dictionary with alternates):
  * @code
@@ -202,7 +202,7 @@ udx_data_address udx_db_builder_add_data(udx_db_builder *builder,
  *   ud_bgl_parse_entry(reader, block, &entry);
  *
  *   // Store definition once
- *   udx_data_address addr = udx_db_builder_add_data(builder,
+ *   udx_value_address addr = udx_db_builder_add_value(builder,
  *                                                           entry.definition,
  *                                                           entry.def_len);
  *
@@ -217,7 +217,7 @@ udx_data_address udx_db_builder_add_data(udx_db_builder *builder,
  */
 udx_error_t udx_db_builder_add_key_entry(udx_db_builder *builder,
                                           const char *key,
-                                          udx_data_address data_address,
+                                          udx_value_address value_address,
                                           uint32_t data_size);
 
 

@@ -26,7 +26,7 @@ void udx_key_entry_free(udx_db_key_entry *entry) {
     free(entry);
 }
 
-void udx_data_entry_free_contents(udx_db_data_entry *entry) {
+void udx_value_entry_free_contents(udx_db_value_entry *entry) {
     if (entry == NULL) return;
     free(entry->key);
     entry->key = NULL;
@@ -36,11 +36,11 @@ void udx_data_entry_free_contents(udx_db_data_entry *entry) {
         free(entry->items.data[i].original_key);
         free(entry->items.data[i].data);
     }
-    udx_data_entry_item_array_free(&entry->items);
+    udx_value_entry_item_array_free(&entry->items);
 }
 
-void udx_data_entry_free(udx_db_data_entry *entry) {
+void udx_value_entry_free(udx_db_value_entry *entry) {
     if (entry == NULL) return;
-    udx_data_entry_free_contents(entry);
+    udx_value_entry_free_contents(entry);
     free(entry);
 }

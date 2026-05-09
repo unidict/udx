@@ -120,12 +120,12 @@ udx_key_entry_array udx_db_index_prefix_match(udx_db *db, const char *prefix, si
  * Load data for an index entry
  * @param db Db pointer
  * @param key_entry Key entry (with addresses) returned from index lookup
- * @return Db entry with data loaded (caller must free with udx_data_entry_free), or NULL on error
+ * @return Db entry with data loaded (caller must free with udx_value_entry_free), or NULL on error
  *
  * @note This function loads data for all items in the key entry
  * @note The key_entry is still valid after this call (ownership is not transferred)
  */
-udx_db_data_entry *udx_db_load_data(udx_db *db, const udx_db_key_entry *key_entry);
+udx_db_value_entry *udx_db_load_data(udx_db *db, const udx_db_key_entry *key_entry);
 
 // ============================================================
 // Full Data Lookup (returns entries with data loaded)
@@ -135,9 +135,9 @@ udx_db_data_entry *udx_db_load_data(udx_db *db, const udx_db_key_entry *key_entr
  * Look up a single key in db (with data loaded)
  * @param db Db pointer
  * @param key Key to look up
- * @return Db entry pointer (caller must free with udx_data_entry_free), or NULL if not found
+ * @return Db entry pointer (caller must free with udx_value_entry_free), or NULL if not found
  */
-udx_db_data_entry *udx_db_lookup(udx_db *db, const char *key);
+udx_db_value_entry *udx_db_lookup(udx_db *db, const char *key);
 
 // ============================================================
 // Iterator
@@ -172,7 +172,7 @@ void udx_db_iter_destroy(udx_db_iter *iter);
  *       or until udx_db_iter_destroy() is called.
  *       If you need to persist the data, make a deep copy before the next iteration.
  */
-const udx_db_data_entry *udx_db_iter_next(udx_db_iter *iter);
+const udx_db_value_entry *udx_db_iter_next(udx_db_iter *iter);
 
 #ifdef __cplusplus
 }

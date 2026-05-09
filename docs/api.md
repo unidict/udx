@@ -413,7 +413,7 @@ Prefix match in database (index only, no data loaded).
 #### `udx_db_load_data()`
 
 ```c
-udx_db_data_entry *udx_db_load_data(udx_db *db, const udx_db_key_entry *index_entry);
+udx_db_value_entry *udx_db_load_data(udx_db *db, const udx_db_key_entry *index_entry);
 ```
 
 Load data for an index entry.
@@ -423,7 +423,7 @@ Load data for an index entry.
 - `index_entry` - Index entry (with addresses) returned from index lookup
 
 **Return:**
-- Database entry with data loaded (caller must free with `udx_data_entry_free`), or `NULL` on error
+- Database entry with data loaded (caller must free with `udx_value_entry_free`), or `NULL` on error
 
 **Notes:**
 - This function loads data for all items in the index entry
@@ -438,7 +438,7 @@ Full data lookup functions return entries with all data loaded.
 #### `udx_db_lookup()`
 
 ```c
-udx_db_data_entry *udx_db_lookup(udx_db *db, const char *key);
+udx_db_value_entry *udx_db_lookup(udx_db *db, const char *key);
 ```
 
 Look up a single key in database (with data loaded).
@@ -448,7 +448,7 @@ Look up a single key in database (with data loaded).
 - `key` - Key to look up
 
 **Return:**
-- Database entry pointer (caller must free with `udx_data_entry_free`), or `NULL` if not found
+- Database entry pointer (caller must free with `udx_value_entry_free`), or `NULL` if not found
 
 ---
 
@@ -496,7 +496,7 @@ Destroy an iterator.
 #### `udx_db_iter_next()`
 
 ```c
-const udx_db_data_entry *udx_db_iter_next(udx_db_iter *iter);
+const udx_db_value_entry *udx_db_iter_next(udx_db_iter *iter);
 ```
 
 Get the next entry.
@@ -520,11 +520,11 @@ Get the next entry.
 See `udx_types.h` for the complete definition of data types used in the API, including:
 
 - `udx_db_key_entry` - Index entry with addresses (no data)
-- `udx_db_data_entry` - Database entry with data loaded
+- `udx_db_value_entry` - Database entry with data loaded
 - `udx_key_entry_array` - Array of index entries
-- `udx_data_address` - Address encoding (chunk index + offset)
+- `udx_value_address` - Address encoding (chunk index + offset)
 
 Memory management functions:
 - `udx_key_entry_free()` - Free an index entry
-- `udx_data_entry_free()` - Free a database entry
+- `udx_value_entry_free()` - Free a database entry
 - `udx_key_entry_array_free_contents()` - Free array contents

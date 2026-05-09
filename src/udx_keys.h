@@ -45,7 +45,7 @@ void udx_keys_destroy(udx_keys *keys);
  * Add a key
  * @param keys Container pointer
  * @param key Key (UTF-8)
- * @param data_address Data address
+ * @param value_address Value address
  * @param data_size Data size in bytes
  * @return true on success, false on failure
  *
@@ -54,7 +54,7 @@ void udx_keys_destroy(udx_keys *keys);
  */
 bool udx_keys_add(udx_keys *keys,
                           const char *key,
-                          udx_data_address data_address,
+                          udx_value_address value_address,
                           uint32_t data_size);
 
 /**
