@@ -384,7 +384,7 @@ Look up a single key in database (index only, no data loaded).
 
 **Notes:**
 - This is faster than `udx_db_lookup` as it doesn't load data
-- Use `udx_db_load_data()` to load data for specific items
+- Use `udx_db_load_value()` to load data for specific items
 
 ---
 
@@ -406,14 +406,14 @@ Prefix match in database (index only, no data loaded).
 
 **Notes:**
 - This is useful for autocomplete/suggestion features
-- Returns entries with addresses only, use `udx_db_load_data()` to load data
+- Returns entries with addresses only, use `udx_db_load_value()` to load data
 
 ---
 
-#### `udx_db_load_data()`
+#### `udx_db_load_value()`
 
 ```c
-udx_db_value_entry *udx_db_load_data(udx_db *db, const udx_db_key_entry *index_entry);
+udx_db_value_entry *udx_db_load_value(udx_db *db, const udx_db_key_entry *index_entry);
 ```
 
 Load data for an index entry.

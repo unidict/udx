@@ -100,7 +100,7 @@ uint32_t udx_db_get_index_bptree_height(const udx_db *db);
  * @return Index entry pointer (caller must free with udx_key_entry_free), or NULL if not found
  *
  * @note This is faster than udx_db_lookup as it doesn't load data
- * @note Use udx_db_load_data() to load data for specific items
+ * @note Use udx_db_load_value() to load data for specific items
  */
 udx_db_key_entry *udx_db_index_lookup(udx_db *db, const char *key);
 
@@ -112,7 +112,7 @@ udx_db_key_entry *udx_db_index_lookup(udx_db *db, const char *key);
  * @return Array of index entries (caller must free with udx_key_entry_array_free_contents)
  *
  * @note This is useful for autocomplete/suggestion features
- * @note Returns entries with addresses only, use udx_db_load_data() to load data
+ * @note Returns entries with addresses only, use udx_db_load_value() to load data
  */
 udx_key_entry_array udx_db_index_prefix_match(udx_db *db, const char *prefix, size_t max_results);
 
@@ -125,7 +125,7 @@ udx_key_entry_array udx_db_index_prefix_match(udx_db *db, const char *prefix, si
  * @note This function loads data for all items in the key entry
  * @note The key_entry is still valid after this call (ownership is not transferred)
  */
-udx_db_value_entry *udx_db_load_data(udx_db *db, const udx_db_key_entry *key_entry);
+udx_db_value_entry *udx_db_load_value(udx_db *db, const udx_db_key_entry *key_entry);
 
 // ============================================================
 // Full Data Lookup (returns entries with data loaded)
