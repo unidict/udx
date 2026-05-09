@@ -600,7 +600,7 @@ void udx_db_close(udx_db *db) {
 // Internal Lookup Functions (static)
 // ============================================================
 
-udx_db_key_entry *udx_db_index_lookup(udx_db *db, const char *key) {
+udx_db_key_entry *udx_db_key_entry_lookup(udx_db *db, const char *key) {
     if (db == NULL || key == NULL) return NULL;
 
     if (db->header.index_entry_count == 0 || db->root_node == NULL) return NULL;
@@ -639,7 +639,7 @@ udx_db_key_entry *udx_db_index_lookup(udx_db *db, const char *key) {
     return entry;
 }
 
-udx_key_entry_array udx_db_index_prefix_match(udx_db *db, const char *prefix,
+udx_key_entry_array udx_db_key_entry_prefix_match(udx_db *db, const char *prefix,
                                                          size_t max_results) {
     udx_key_entry_array result;
     udx_key_entry_array_init(&result);
@@ -850,7 +850,7 @@ udx_db_value_entry *udx_db_lookup(udx_db *db, const char *key) {
     }
 
     // Use internal index lookup
-    udx_db_key_entry *key_entry = udx_db_index_lookup(db, key);
+    udx_db_key_entry *key_entry = udx_db_key_entry_lookup(db, key);
     if (key_entry == NULL) {
         return NULL;
     }

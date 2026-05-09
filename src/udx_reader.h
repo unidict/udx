@@ -90,7 +90,7 @@ uint32_t udx_db_get_item_count(const udx_db *db);
 uint32_t udx_db_get_index_bptree_height(const udx_db *db);
 
 // ============================================================
-// Index Lookup (returns entries with addresses only, no data loaded)
+// Key Entry Lookup (returns key entries with addresses only, no data loaded)
 // ============================================================
 
 /**
@@ -102,7 +102,7 @@ uint32_t udx_db_get_index_bptree_height(const udx_db *db);
  * @note This is faster than udx_db_lookup as it doesn't load data
  * @note Use udx_db_lookup_by_key_entry() to load data for specific items
  */
-udx_db_key_entry *udx_db_index_lookup(udx_db *db, const char *key);
+udx_db_key_entry *udx_db_key_entry_lookup(udx_db *db, const char *key);
 
 /**
  * Prefix match in db (index only, no data loaded)
@@ -114,18 +114,7 @@ udx_db_key_entry *udx_db_index_lookup(udx_db *db, const char *key);
  * @note This is useful for autocomplete/suggestion features
  * @note Returns entries with addresses only, use udx_db_lookup_by_key_entry() to load data
  */
-udx_key_entry_array udx_db_index_prefix_match(udx_db *db, const char *prefix, size_t max_results);
-
-/**
- * Load data for an index entry
- * @param db Db pointer
- * @param key_entry Key entry (with addresses) returned from index lookup
- * @return Db entry with data loaded (caller must free with udx_value_entry_free), or NULL on error
- *
- * @note This function loads data for all items in the key entry
- * @note The key_entry is still valid after this call (ownership is not transferred)
- */
-udx_db_value_entry *udx_db_lookup_by_key_entry(udx_db *db, const udx_db_key_entry *key_entry);
+udx_key_entry_array udx_db_key_entry_prefix_match(udx_db *db, const char *prefix, size_t max_results);
 
 // ============================================================
 // Full Data Lookup (returns entries with data loaded)
@@ -138,6 +127,17 @@ udx_db_value_entry *udx_db_lookup_by_key_entry(udx_db *db, const udx_db_key_entr
  * @return Db entry pointer (caller must free with udx_value_entry_free), or NULL if not found
  */
 udx_db_value_entry *udx_db_lookup(udx_db *db, const char *key);
+
+/**
+ * Look up by key entry (with data loaded)
+ * @param db Db pointer
+ * @param key_entry Key entry (with addresses) returned from index lookup
+ * @return Db entry with data loaded (caller must free with udx_value_entry_free), or NULL on error
+ *
+ * @note This function loads data for all items in the key entry
+ * @note The key_entry is still valid after this call (ownership is not transferred)
+ */
+udx_db_value_entry *udx_db_lookup_by_key_entry(udx_db *db, const udx_db_key_entry *key_entry);
 
 // ============================================================
 // Iterator
