@@ -45,7 +45,7 @@ typedef enum {
     UDX_ERR_BPTREE              = -3,   // B+ tree operation failed
     UDX_ERR_HEADER              = -4,   // Header write/read failed
     UDX_ERR_CHUNK               = -5,   // Chunk writer/reader failed
-    UDX_ERR_WORDS               = -6,   // Words container operation failed
+    UDX_ERR_KEYS               = -6,   // Keys container operation failed
     UDX_ERR_ACTIVE_DB           = -7,   // A database builder is still active
     UDX_ERR_DUPLICATE_NAME      = -8,   // Duplicate database name
     UDX_ERR_METADATA            = -9,   // Invalid metadata parameters
@@ -57,8 +57,8 @@ typedef enum {
 // Basic Types
 // ============================================================
 
-// Chunk address: 48-bit chunk_index + 16-bit offset in chunk (chunk_index limited to 32 bits)
-typedef uint64_t udx_chunk_address;
+// Data address: 48-bit chunk_index + 16-bit offset in chunk (chunk_index limited to 32 bits)
+typedef uint64_t udx_data_address;
 
 // Invalid address sentinel (used to indicate errors)
 #define UDX_INVALID_ADDRESS      UINT64_MAX
@@ -70,42 +70,42 @@ typedef uint64_t udx_chunk_address;
 // Item Types
 // ============================================================
 
-// Index entry item (one original_word + address + data_size)
+// Key entry item (one original_key + address + data_size)
 typedef struct {
-    char *original_word;       // Original word (preserves case)
-    udx_chunk_address data_address; // Data address
+    char *original_key;       // Original key (preserves case)
+    udx_data_address data_address; // Data address
     uint32_t data_size;        // Data size in bytes
-} udx_index_entry_item;
+} udx_key_entry_item;
 
-// DB entry item (one original_word + data pair)
+// Data entry item (one original_key + data pair)
 typedef struct {
-    char *original_word;  // Original word (preserves case)
+    char *original_key;  // Original key (preserves case)
     uint8_t *data;        // Data content
     size_t size;          // Data size
-} udx_db_entry_item;
+} udx_data_entry_item;
 
 // ============================================================
 // Item Arrays (used by Entry Types)
 // ============================================================
 
-// ---- udx_index_entry_item_array ----
+// ---- udx_key_entry_item_array ----
 typedef struct {
-    udx_index_entry_item *data;
+    udx_key_entry_item *data;
     size_t size;
     size_t capacity;
-} udx_index_entry_item_array;
+} udx_key_entry_item_array;
 
-static inline void udx_index_entry_item_array_init(udx_index_entry_item_array *arr) {
+static inline void udx_key_entry_item_array_init(udx_key_entry_item_array *arr) {
     arr->data = NULL;
     arr->size = 0;
     arr->capacity = 0;
 }
 
-static inline bool udx_index_entry_item_array_push(udx_index_entry_item_array *arr, udx_index_entry_item val) {
+static inline bool udx_key_entry_item_array_push(udx_key_entry_item_array *arr, udx_key_entry_item val) {
     if (arr == NULL) return false;
     if (arr->size >= arr->capacity) {
         size_t new_cap = arr->capacity == 0 ? 8 : arr->capacity * 2;
-        udx_index_entry_item *new_data = (udx_index_entry_item *)realloc(arr->data, new_cap * sizeof(udx_index_entry_item));
+        udx_key_entry_item *new_data = (udx_key_entry_item *)realloc(arr->data, new_cap * sizeof(udx_key_entry_item));
         if (new_data == NULL) return false;
         arr->data = new_data;
         arr->capacity = new_cap;
@@ -114,17 +114,17 @@ static inline bool udx_index_entry_item_array_push(udx_index_entry_item_array *a
     return true;
 }
 
-static inline bool udx_index_entry_item_array_reserve(udx_index_entry_item_array *arr, size_t new_cap) {
+static inline bool udx_key_entry_item_array_reserve(udx_key_entry_item_array *arr, size_t new_cap) {
     if (arr == NULL) return false;
     if (new_cap <= arr->capacity) return true;
-    udx_index_entry_item *new_data = (udx_index_entry_item *)realloc(arr->data, new_cap * sizeof(udx_index_entry_item));
+    udx_key_entry_item *new_data = (udx_key_entry_item *)realloc(arr->data, new_cap * sizeof(udx_key_entry_item));
     if (new_data == NULL) return false;
     arr->data = new_data;
     arr->capacity = new_cap;
     return true;
 }
 
-static inline void udx_index_entry_item_array_free(udx_index_entry_item_array *arr) {
+static inline void udx_key_entry_item_array_free(udx_key_entry_item_array *arr) {
     if (arr == NULL) return;
     free(arr->data);
     arr->data = NULL;
@@ -132,24 +132,24 @@ static inline void udx_index_entry_item_array_free(udx_index_entry_item_array *a
     arr->capacity = 0;
 }
 
-// ---- udx_db_entry_item_array ----
+// ---- udx_data_entry_item_array ----
 typedef struct {
-    udx_db_entry_item *data;
+    udx_data_entry_item *data;
     size_t size;
     size_t capacity;
-} udx_db_entry_item_array;
+} udx_data_entry_item_array;
 
-static inline void udx_db_entry_item_array_init(udx_db_entry_item_array *arr) {
+static inline void udx_data_entry_item_array_init(udx_data_entry_item_array *arr) {
     arr->data = NULL;
     arr->size = 0;
     arr->capacity = 0;
 }
 
-static inline bool udx_db_entry_item_array_push(udx_db_entry_item_array *arr, udx_db_entry_item val) {
+static inline bool udx_data_entry_item_array_push(udx_data_entry_item_array *arr, udx_data_entry_item val) {
     if (arr == NULL) return false;
     if (arr->size >= arr->capacity) {
         size_t new_cap = arr->capacity == 0 ? 8 : arr->capacity * 2;
-        udx_db_entry_item *new_data = (udx_db_entry_item *)realloc(arr->data, new_cap * sizeof(udx_db_entry_item));
+        udx_data_entry_item *new_data = (udx_data_entry_item *)realloc(arr->data, new_cap * sizeof(udx_data_entry_item));
         if (new_data == NULL) return false;
         arr->data = new_data;
         arr->capacity = new_cap;
@@ -158,17 +158,17 @@ static inline bool udx_db_entry_item_array_push(udx_db_entry_item_array *arr, ud
     return true;
 }
 
-static inline bool udx_db_entry_item_array_reserve(udx_db_entry_item_array *arr, size_t new_cap) {
+static inline bool udx_data_entry_item_array_reserve(udx_data_entry_item_array *arr, size_t new_cap) {
     if (arr == NULL) return false;
     if (new_cap <= arr->capacity) return true;
-    udx_db_entry_item *new_data = (udx_db_entry_item *)realloc(arr->data, new_cap * sizeof(udx_db_entry_item));
+    udx_data_entry_item *new_data = (udx_data_entry_item *)realloc(arr->data, new_cap * sizeof(udx_data_entry_item));
     if (new_data == NULL) return false;
     arr->data = new_data;
     arr->capacity = new_cap;
     return true;
 }
 
-static inline void udx_db_entry_item_array_free(udx_db_entry_item_array *arr) {
+static inline void udx_data_entry_item_array_free(udx_data_entry_item_array *arr) {
     if (arr == NULL) return;
     free(arr->data);
     arr->data = NULL;
@@ -180,36 +180,36 @@ static inline void udx_db_entry_item_array_free(udx_db_entry_item_array *arr) {
 // Entry Types
 // ============================================================
 
-// Index entry (folded word + items array)
+// Key entry (folded key + items with addresses)
 typedef struct {
-    char *word;                      // Word (folded for sorting and lookup)
-    udx_index_entry_item_array items; // Original words and addresses
-} udx_index_entry;
+    char *key;                      // Key (folded for sorting and lookup)
+    udx_key_entry_item_array items; // Original keys and addresses
+} udx_db_key_entry;
 
-// DB entry (folded word + items array)
+// Data entry (folded key + items with data content)
 typedef struct {
-    char *word;                     // Word (folded for sorting and lookup)
-    udx_db_entry_item_array items;  // Original words and data
-} udx_db_entry;
+    char *key;                     // Key (folded for sorting and lookup)
+    udx_data_entry_item_array items;  // Original keys and data
+} udx_db_data_entry;
 
 // ============================================================
 // Entry Arrays
 // ============================================================
 
-// ---- udx_index_entry_array ----
+// ---- udx_key_entry_array ----
 typedef struct {
-    udx_index_entry *data;
+    udx_db_key_entry *data;
     size_t size;
     size_t capacity;
-} udx_index_entry_array;
+} udx_key_entry_array;
 
-static inline void udx_index_entry_array_init(udx_index_entry_array *arr) {
+static inline void udx_key_entry_array_init(udx_key_entry_array *arr) {
     arr->data = NULL;
     arr->size = 0;
     arr->capacity = 0;
 }
 
-static inline void udx_index_entry_array_free(udx_index_entry_array *arr) {
+static inline void udx_key_entry_array_free(udx_key_entry_array *arr) {
     if (arr == NULL) return;
     free(arr->data);
     arr->data = NULL;
@@ -217,21 +217,21 @@ static inline void udx_index_entry_array_free(udx_index_entry_array *arr) {
     arr->capacity = 0;
 }
 
-static inline bool udx_index_entry_array_reserve(udx_index_entry_array *arr, size_t new_cap) {
+static inline bool udx_key_entry_array_reserve(udx_key_entry_array *arr, size_t new_cap) {
     if (arr == NULL) return false;
     if (new_cap <= arr->capacity) return true;
-    udx_index_entry *new_data = (udx_index_entry *)realloc(arr->data, new_cap * sizeof(udx_index_entry));
+    udx_db_key_entry *new_data = (udx_db_key_entry *)realloc(arr->data, new_cap * sizeof(udx_db_key_entry));
     if (new_data == NULL) return false;
     arr->data = new_data;
     arr->capacity = new_cap;
     return true;
 }
 
-static inline bool udx_index_entry_array_push(udx_index_entry_array *arr, udx_index_entry val) {
+static inline bool udx_key_entry_array_push(udx_key_entry_array *arr, udx_db_key_entry val) {
     if (arr == NULL) return false;
     if (arr->size >= arr->capacity) {
         size_t new_cap = arr->capacity == 0 ? 8 : arr->capacity * 2;
-        udx_index_entry *new_data = (udx_index_entry *)realloc(arr->data, new_cap * sizeof(udx_index_entry));
+        udx_db_key_entry *new_data = (udx_db_key_entry *)realloc(arr->data, new_cap * sizeof(udx_db_key_entry));
         if (new_data == NULL) return false;
         arr->data = new_data;
         arr->capacity = new_cap;
@@ -241,23 +241,23 @@ static inline bool udx_index_entry_array_push(udx_index_entry_array *arr, udx_in
 }
 
 // Forward declaration (defined in udx_types.c)
-void udx_entry_free_contents(udx_index_entry *entry);
+void udx_key_entry_free_contents(udx_db_key_entry *entry);
 
-static inline void udx_index_entry_array_free_contents(udx_index_entry_array *arr) {
+static inline void udx_key_entry_array_free_contents(udx_key_entry_array *arr) {
     if (arr == NULL) return;
     for (size_t i = 0; i < arr->size; i++) {
-        udx_entry_free_contents(&arr->data[i]);
+        udx_key_entry_free_contents(&arr->data[i]);
     }
-    udx_index_entry_array_free(arr);
+    udx_key_entry_array_free(arr);
 }
 
 // ============================================================
 // Entry Operations
 // ============================================================
 
-void udx_entry_free(udx_index_entry *entry);
-void udx_db_entry_free_contents(udx_db_entry *entry);
-void udx_db_entry_free(udx_db_entry *entry);
+void udx_key_entry_free(udx_db_key_entry *entry);
+void udx_data_entry_free_contents(udx_db_data_entry *entry);
+void udx_data_entry_free(udx_db_data_entry *entry);
 
 // ============================================================
 // Other Dynamic Arrays
@@ -369,8 +369,8 @@ typedef struct {
     uint64_t chunk_table_offset;      // Chunk table offset
     uint64_t index_root_offset;       // B+ tree root node offset
     uint64_t index_first_leaf_offset; // B+ tree first leaf node offset
-    uint32_t index_entry_count;       // Total number of entries (unique words)
-    uint32_t index_item_count;        // Total number of addresses (all words)
+    uint32_t index_entry_count;       // Total number of entries (unique keys)
+    uint32_t index_item_count;        // Total number of addresses (all keys)
     uint32_t index_bptree_height;     // B+ tree height
     uint32_t metadata_size;           // Metadata size (0 = no metadata)
     uint32_t checksum;                // CRC32 checksum of header (excluding this field)

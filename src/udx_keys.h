@@ -1,12 +1,12 @@
 //
-//  udx_words.h
+//  udx_keys.h
 //  libudx
 //
 //  Created by kejinlu on 2026/2/25.
 //
 
-#ifndef udx_words_h
-#define udx_words_h
+#ifndef udx_keys_h
+#define udx_keys_h
 
 #include <stdint.h>
 #include <stddef.h>
@@ -17,59 +17,59 @@ extern "C" {
 #endif
 
 // ============================================================
-// Ordered Word Container
+// Ordered Key Container
 // ============================================================
-typedef struct udx_words udx_words;
+typedef struct udx_keys udx_keys;
 
 // ============================================================
 // Creation and Destruction
 // ============================================================
 
 /**
- * Create an ordered word container
+ * Create an ordered key container
  * @return Container pointer, or NULL on failure
  */
-udx_words *udx_words_create(void);
+udx_keys *udx_keys_create(void);
 
 /**
- * Destroy an ordered word container
- * @param words Container pointer
+ * Destroy an ordered key container
+ * @param keys Container pointer
  */
-void udx_words_destroy(udx_words *words);
+void udx_keys_destroy(udx_keys *keys);
 
 // ============================================================
-// Word Operations
+// Key Operations
 // ============================================================
 
 /**
- * Add a word
- * @param words Container pointer
- * @param word Word (UTF-8)
+ * Add a key
+ * @param keys Container pointer
+ * @param key Key (UTF-8)
  * @param data_address Data address
  * @param data_size Data size in bytes
  * @return true on success, false on failure
  *
- * @note The word will be folded (lowercased, etc.) for sorting and lookup
- * @note Multiple addresses can be stored under the same word
+ * @note The key will be folded (lowercased, etc.) for sorting and lookup
+ * @note Multiple addresses can be stored under the same key
  */
-bool udx_words_add(udx_words *words,
-                          const char *word,
-                          udx_chunk_address data_address,
+bool udx_keys_add(udx_keys *keys,
+                          const char *key,
+                          udx_data_address data_address,
                           uint32_t data_size);
 
 /**
- * Get the number of unique words
- * @param words Container pointer
- * @return Number of unique words
+ * Get the number of unique keys
+ * @param keys Container pointer
+ * @return Number of unique keys
  */
-size_t udx_words_count(const udx_words *words);
+size_t udx_keys_count(const udx_keys *keys);
 
 /**
  * Get the total number of items
- * @param words Container pointer
- * @return Total number of items across all words
+ * @param keys Container pointer
+ * @return Total number of items across all keys
  */
-size_t udx_words_item_count(const udx_words *words);
+size_t udx_keys_item_count(const udx_keys *keys);
 
 // ============================================================
 // Iterator
@@ -78,37 +78,37 @@ size_t udx_words_item_count(const udx_words *words);
 /**
  * Iterator type
  */
-typedef struct udx_words_iter udx_words_iter;
+typedef struct udx_keys_iter udx_keys_iter;
 
 /**
  * Create an iterator
- * @param words Container pointer
+ * @param keys Container pointer
  * @return Iterator pointer, or NULL on failure
  */
-udx_words_iter *udx_words_iter_create(udx_words *words);
+udx_keys_iter *udx_keys_iter_create(udx_keys *keys);
 
 /**
  * Destroy an iterator
  * @param iter Iterator pointer
  */
-void udx_words_iter_destroy(udx_words_iter *iter);
+void udx_keys_iter_destroy(udx_keys_iter *iter);
 
 /**
  * Get the next entry
  * @param iter Iterator pointer
  * @return Entry pointer, or NULL when traversal is complete
  */
-const udx_index_entry *udx_words_iter_next(udx_words_iter *iter);
+const udx_db_key_entry *udx_keys_iter_next(udx_keys_iter *iter);
 
 /**
  * Peek at the current entry (without advancing the iterator)
  * @param iter Iterator pointer
  * @return Entry pointer, or NULL when traversal is complete
  */
-const udx_index_entry *udx_words_iter_peek(udx_words_iter *iter);
+const udx_db_key_entry *udx_keys_iter_peek(udx_keys_iter *iter);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* udx_words_h */
+#endif /* udx_keys_h */

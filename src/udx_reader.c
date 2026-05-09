@@ -273,18 +273,18 @@ static uint64_t find_child_offset(const udx_index_node *node, const char *key) {
 
 /**
  * Parse an entry
- * Format: [folded_word\0] [item_count:u16] [items...]
- *   item: [original_word\0] [address:u64] [data_size:u32]
+ * Format: [folded_key\0] [item_count:u16] [items...]
+ *   item: [original_key\0] [address:u64] [data_size:u32]
  * @param out_entry If not NULL, returns parsed entry (caller must free)
  * @return Entry size in bytes
  */
-static size_t parse_entry(const uint8_t *data, size_t available, udx_index_entry **out_entry) {
+static size_t parse_entry(const uint8_t *data, size_t available, udx_db_key_entry **out_entry) {
     const uint8_t *ptr = data;
     const uint8_t *end = data + available;
 
-    // folded_word
-    const char *folded_word = (const char *)ptr;
-    size_t folded_len = strlen(folded_word) + 1;
+    // folded_key
+    const char *folded_key = (const char *)ptr;
+    size_t folded_len = strlen(folded_key) + 1;
     if (ptr + folded_len > end) return 0;
     ptr += folded_len;
 
@@ -297,12 +297,12 @@ static size_t parse_entry(const uint8_t *data, size_t available, udx_index_entry
     // If only calculating size, continue parsing
     if (out_entry == NULL) {
         for (uint16_t i = 0; i < item_count; i++) {
-            // original_word
+            // original_key
             size_t original_len = strlen((const char *)ptr) + 1;
-            if (ptr + original_len + sizeof(udx_chunk_address) + sizeof(uint32_t) > end) return 0;
+            if (ptr + original_len + sizeof(udx_data_address) + sizeof(uint32_t) > end) return 0;
             ptr += original_len;
             // address
-            ptr += sizeof(udx_chunk_address);
+            ptr += sizeof(udx_data_address);
             // data_size
             ptr += sizeof(uint32_t);
         }
@@ -310,44 +310,44 @@ static size_t parse_entry(const uint8_t *data, size_t available, udx_index_entry
     }
 
     // Allocate entry
-    udx_index_entry *entry = (udx_index_entry *)calloc(1, sizeof(udx_index_entry));
+    udx_db_key_entry *entry = (udx_db_key_entry *)calloc(1, sizeof(udx_db_key_entry));
     if (entry == NULL) return 0;
 
-    entry->word = strdup(folded_word);
-    if (entry->word == NULL) {
+    entry->key = strdup(folded_key);
+    if (entry->key == NULL) {
         free(entry);
         return 0;
     }
 
-    udx_index_entry_item_array_init(&entry->items);
+    udx_key_entry_item_array_init(&entry->items);
     if (item_count > 0) {
-        if (!udx_index_entry_item_array_reserve(&entry->items, item_count)) {
-            free(entry->word);
+        if (!udx_key_entry_item_array_reserve(&entry->items, item_count)) {
+            free(entry->key);
             free(entry);
             return 0;
         }
 
         for (uint16_t i = 0; i < item_count; i++) {
-            // original_word
-            const char *original_word = (const char *)ptr;
-            size_t original_len = strlen(original_word) + 1;
-            if (ptr + original_len + sizeof(udx_chunk_address) + sizeof(uint32_t) > end) {
-                udx_entry_free_contents(entry);
+            // original_key
+            const char *original_key = (const char *)ptr;
+            size_t original_len = strlen(original_key) + 1;
+            if (ptr + original_len + sizeof(udx_data_address) + sizeof(uint32_t) > end) {
+                udx_key_entry_free_contents(entry);
                 free(entry);
                 return 0;
             }
-            char *original_copy = strdup(original_word);
+            char *original_copy = strdup(original_key);
             if (original_copy == NULL) {
-                udx_entry_free_contents(entry);
+                udx_key_entry_free_contents(entry);
                 free(entry);
                 return 0;
             }
             ptr += original_len;
 
             // address
-            udx_chunk_address address;
-            memcpy(&address, ptr, sizeof(udx_chunk_address));
-            ptr += sizeof(udx_chunk_address);
+            udx_data_address address;
+            memcpy(&address, ptr, sizeof(udx_data_address));
+            ptr += sizeof(udx_data_address);
 
             // data_size
             uint32_t data_size;
@@ -355,11 +355,11 @@ static size_t parse_entry(const uint8_t *data, size_t available, udx_index_entry
             ptr += sizeof(uint32_t);
 
             // Add item
-            udx_index_entry_item item;
-            item.original_word = original_copy;
+            udx_key_entry_item item;
+            item.original_key = original_copy;
             item.data_address = address;
             item.data_size = data_size;
-            udx_index_entry_item_array_push(&entry->items, item);
+            udx_key_entry_item_array_push(&entry->items, item);
         }
     }
 
@@ -370,8 +370,8 @@ static size_t parse_entry(const uint8_t *data, size_t available, udx_index_entry
 /**
  * Search in leaf node using binary search (GoldenDict style)
  * Format: [node_type:u8] [entry_count:u16] [entries...]
- * Each entry: [folded_word\0] [item_count:u16] [items...]
- *   item: [original_word\0] [address:u64] [data_size:u32]
+ * Each entry: [folded_key\0] [item_count:u16] [items...]
+ *   item: [original_key\0] [address:u64] [data_size:u32]
  *
  * @param node Leaf node to search
  * @param key Key to search for
@@ -397,7 +397,7 @@ static const uint8_t *search_leaf_node(const udx_index_node *node,
         entry_offsets[i] = current;
 
         // Skip to next entry
-        // folded_word
+        // folded_key
         size_t folded_len = strlen((const char *)current) + 1;
         if (current + folded_len > node_end) { free(entry_offsets); return NULL; }
         current += folded_len;
@@ -410,15 +410,15 @@ static const uint8_t *search_leaf_node(const udx_index_node *node,
 
         // items
         for (uint16_t j = 0; j < item_count; j++) {
-            // original_word
+            // original_key
             size_t original_len = strlen((const char *)current) + 1;
-            if (current + original_len + sizeof(udx_chunk_address) + sizeof(uint32_t) > node_end) {
+            if (current + original_len + sizeof(udx_data_address) + sizeof(uint32_t) > node_end) {
                 free(entry_offsets); return NULL;
             }
             current += original_len;
 
             // address + data_size
-            current += sizeof(udx_chunk_address);
+            current += sizeof(udx_data_address);
             current += sizeof(uint32_t);
         }
     }
@@ -600,31 +600,31 @@ void udx_db_close(udx_db *db) {
 // Internal Lookup Functions (static)
 // ============================================================
 
-udx_index_entry *udx_db_index_lookup(udx_db *db, const char *word) {
-    if (db == NULL || word == NULL) return NULL;
+udx_db_key_entry *udx_db_index_lookup(udx_db *db, const char *key) {
+    if (db == NULL || key == NULL) return NULL;
 
     if (db->header.index_entry_count == 0 || db->root_node == NULL) return NULL;
 
-    char *key = udx_fold_string(word);
-    if (key == NULL) return NULL;
+    char *folded_key = udx_fold_string(key);
+    if (folded_key == NULL) return NULL;
 
     udx_index_node *current_node = db->root_node;
     bool is_root = true;
 
     while (ud_index_node_is_internal(current_node)) {
-        uint64_t child_offset = find_child_offset(current_node, key);
+        uint64_t child_offset = find_child_offset(current_node, folded_key);
         if (!is_root) free_node(current_node);
         is_root = false;
         current_node = read_index_node(db, child_offset);
         if (current_node == NULL) {
-            free(key);
+            free(folded_key);
             return NULL;
         }
     }
 
     // Search for exact match
-    const uint8_t *entry_ptr = search_leaf_node(current_node, key, true);
-    free(key);
+    const uint8_t *entry_ptr = search_leaf_node(current_node, folded_key, true);
+    free(folded_key);
 
     if (entry_ptr == NULL) {
         if (!is_root) free_node(current_node);
@@ -632,17 +632,17 @@ udx_index_entry *udx_db_index_lookup(udx_db *db, const char *word) {
     }
 
     // Parse the found entry BEFORE freeing the node (fix use-after-free)
-    udx_index_entry *entry = NULL;
+    udx_db_key_entry *entry = NULL;
     parse_entry(entry_ptr, current_node->data + current_node->size - entry_ptr, &entry);
-    
+
     if (!is_root) free_node(current_node);
     return entry;
 }
 
-udx_index_entry_array udx_db_index_prefix_match(udx_db *db, const char *prefix,
+udx_key_entry_array udx_db_index_prefix_match(udx_db *db, const char *prefix,
                                                          size_t max_results) {
-    udx_index_entry_array result;
-    udx_index_entry_array_init(&result);
+    udx_key_entry_array result;
+    udx_key_entry_array_init(&result);
 
     if (db == NULL || prefix == NULL) return result;
 
@@ -693,7 +693,7 @@ udx_index_entry_array udx_db_index_prefix_match(udx_db *db, const char *prefix,
 
     // Reserve initial capacity
     size_t initial_capacity = (max_results > 0 && max_results < 64) ? max_results : 64;
-    if (!udx_index_entry_array_reserve(&result, initial_capacity)) {
+    if (!udx_key_entry_array_reserve(&result, initial_capacity)) {
         if (!is_root) free_node(current_node);
         free(key);
         return result;
@@ -712,19 +712,19 @@ udx_index_entry_array udx_db_index_prefix_match(udx_db *db, const char *prefix,
             }
 
             // Parse entry
-            udx_index_entry *entry = NULL;
+            udx_db_key_entry *entry = NULL;
             size_t entry_size = parse_entry(current, node_end - current, &entry);
             if (entry_size == 0 || entry == NULL) {
                 if (!is_root) free_node(current_node);
-                udx_index_entry_array_free_contents(&result);
-                udx_index_entry_array_init(&result);
+                udx_key_entry_array_free_contents(&result);
+                udx_key_entry_array_init(&result);
                 free(key);
                 return result;
             }
 
             // Add entry to result
-            udx_index_entry_array_push(&result, *entry);
-            free(entry);  // Free wrapper, word and addresses are now owned by result
+            udx_key_entry_array_push(&result, *entry);
+            free(entry);  // Free wrapper, key and addresses are now owned by result
 
             // Check max_results
             if (max_results > 0 && result.size >= max_results) {
@@ -780,49 +780,49 @@ cleanup:
 /**
  * Internal helper: get data by address and size
  */
-static uint8_t *udx_db_get_data(udx_db *db, udx_chunk_address address, uint32_t data_size) {
+static uint8_t *udx_db_get_data(udx_db *db, udx_data_address address, uint32_t data_size) {
     if (db == NULL || db->chunk_reader == NULL) return NULL;
     return udx_chunk_reader_get_block(db->chunk_reader, address, data_size);
 }
 
 /**
- * Convert udx_index_entry to udx_db_entry
- * Loads all items for the word
+ * Convert udx_db_key_entry to udx_db_data_entry
+ * Loads all items for the key
  */
-udx_db_entry *udx_db_entry_from_index(udx_db *db, const udx_index_entry *index_entry) {
-    if (index_entry == NULL || index_entry->items.size == 0) {
+udx_db_data_entry *udx_db_load_data(udx_db *db, const udx_db_key_entry *key_entry) {
+    if (key_entry == NULL || key_entry->items.size == 0) {
         return NULL;
     }
 
-    udx_db_entry *db_entry = (udx_db_entry *)calloc(1, sizeof(udx_db_entry));
-    if (db_entry == NULL) {
+    udx_db_data_entry *data_entry = (udx_db_data_entry *)calloc(1, sizeof(udx_db_data_entry));
+    if (data_entry == NULL) {
         return NULL;
     }
 
-    db_entry->word = strdup(index_entry->word);
-    if (db_entry->word == NULL) {
-        free(db_entry);
+    data_entry->key = strdup(key_entry->key);
+    if (data_entry->key == NULL) {
+        free(data_entry);
         return NULL;
     }
 
-    udx_db_entry_item_array_init(&db_entry->items);
+    udx_data_entry_item_array_init(&data_entry->items);
 
     // Reserve space for all items
-    if (!udx_db_entry_item_array_reserve(&db_entry->items, index_entry->items.size)) {
-        udx_db_entry_free_contents(db_entry);
-        free(db_entry);
+    if (!udx_data_entry_item_array_reserve(&data_entry->items, key_entry->items.size)) {
+        udx_data_entry_free_contents(data_entry);
+        free(data_entry);
         return NULL;
     }
 
     // Load data for each item
-    for (size_t i = 0; i < index_entry->items.size; i++) {
-        udx_index_entry_item *src = &index_entry->items.data[i];
+    for (size_t i = 0; i < key_entry->items.size; i++) {
+        udx_key_entry_item *src = &key_entry->items.data[i];
 
-        udx_db_entry_item item;
-        item.original_word = strdup(src->original_word);
-        if (item.original_word == NULL) {
-            udx_db_entry_free_contents(db_entry);
-            free(db_entry);
+        udx_data_entry_item item;
+        item.original_key = strdup(src->original_key);
+        if (item.original_key == NULL) {
+            udx_data_entry_free_contents(data_entry);
+            free(data_entry);
             return NULL;
         }
 
@@ -830,38 +830,38 @@ udx_db_entry *udx_db_entry_from_index(udx_db *db, const udx_index_entry *index_e
         item.size = src->data_size;
 
         if (item.data == NULL) {
-            free(item.original_word);
-            udx_db_entry_free_contents(db_entry);
-            free(db_entry);
+            free(item.original_key);
+            udx_data_entry_free_contents(data_entry);
+            free(data_entry);
             return NULL;
         }
 
         // Push the item (ownership transferred)
-        db_entry->items.data[i] = item;
-        db_entry->items.size++;
+        data_entry->items.data[i] = item;
+        data_entry->items.size++;
     }
 
-    return db_entry;
+    return data_entry;
 }
 
-udx_db_entry *udx_db_lookup(udx_db *db, const char *word) {
-    if (db == NULL || word == NULL) {
+udx_db_data_entry *udx_db_lookup(udx_db *db, const char *key) {
+    if (db == NULL || key == NULL) {
         return NULL;
     }
 
     // Use internal index lookup
-    udx_index_entry *index_entry = udx_db_index_lookup(db, word);
-    if (index_entry == NULL) {
+    udx_db_key_entry *key_entry = udx_db_index_lookup(db, key);
+    if (key_entry == NULL) {
         return NULL;
     }
 
-    // Convert to db_entry
-    udx_db_entry *db_entry = udx_db_entry_from_index(db, index_entry);
+    // Convert to data entry
+    udx_db_data_entry *data_entry = udx_db_load_data(db, key_entry);
 
-    // Free index_entry
-    udx_entry_free(index_entry);
+    // Free key_entry
+    udx_key_entry_free(key_entry);
 
-    return db_entry;
+    return data_entry;
 }
 
 // ============================================================
@@ -899,11 +899,11 @@ const uint8_t *udx_db_get_metadata(const udx_db *db, uint32_t *out_size) {
     return db->metadata;
 }
 
-uint32_t udx_db_get_index_entry_count(const udx_db *db) {
+uint32_t udx_db_get_key_count(const udx_db *db) {
     return db ? db->header.index_entry_count : 0;
 }
 
-uint32_t udx_db_get_index_item_count(const udx_db *db) {
+uint32_t udx_db_get_item_count(const udx_db *db) {
     return db ? db->header.index_item_count : 0;
 }
 
@@ -1070,7 +1070,7 @@ struct udx_db_iter {
     const uint8_t *current_ptr;   // Current entry data pointer
 
     // Current entry (returned to caller)
-    udx_db_entry current_entry;
+    udx_db_data_entry current_entry;
 };
 
 udx_db_iter *udx_db_iter_create(udx_db *db) {
@@ -1080,8 +1080,8 @@ udx_db_iter *udx_db_iter_create(udx_db *db) {
     if (iter == NULL) return NULL;
 
     iter->db = db;
-    udx_db_entry_item_array_init(&iter->current_entry.items);
-    iter->current_entry.word = NULL;
+    udx_data_entry_item_array_init(&iter->current_entry.items);
+    iter->current_entry.key = NULL;
 
     // Read first leaf node
     iter->leaf_node = read_index_node(db, db->header.index_first_leaf_offset);
@@ -1111,30 +1111,30 @@ udx_db_iter *udx_db_iter_create(udx_db *db) {
 void udx_db_iter_destroy(udx_db_iter *iter) {
     if (iter == NULL) return;
 
-    udx_db_entry_free_contents(&iter->current_entry);
+    udx_data_entry_free_contents(&iter->current_entry);
     free_node(iter->leaf_node);
     free(iter);
 }
 
-const udx_db_entry *udx_db_iter_next(udx_db_iter *iter) {
+const udx_db_data_entry *udx_db_iter_next(udx_db_iter *iter) {
     if (iter == NULL) return NULL;
 
     // Free previous entry
-    udx_db_entry_free_contents(&iter->current_entry);
-    iter->current_entry.word = NULL;
-    udx_db_entry_item_array_init(&iter->current_entry.items);
+    udx_data_entry_free_contents(&iter->current_entry);
+    iter->current_entry.key = NULL;
+    udx_data_entry_item_array_init(&iter->current_entry.items);
 
     // Traverse until we find the next entry
     while (true) {
         // Check if current leaf has more entries
         if (iter->current_index < iter->entry_count) {
             // Parse current entry using parse_entry
-            udx_index_entry *index_entry = NULL;
+            udx_db_key_entry *key_entry = NULL;
             size_t entry_size = parse_entry(iter->current_ptr,
                                            iter->leaf_node->data + iter->leaf_node->size - iter->current_ptr,
-                                           &index_entry);
+                                           &key_entry);
 
-            if (entry_size == 0 || index_entry == NULL) {
+            if (entry_size == 0 || key_entry == NULL) {
                 return NULL;
             }
 
@@ -1142,20 +1142,20 @@ const udx_db_entry *udx_db_iter_next(udx_db_iter *iter) {
             iter->current_ptr += entry_size;
             iter->current_index++;
 
-            // Convert to db entry
-            udx_db_entry *db_entry = udx_db_entry_from_index(iter->db, index_entry);
+            // Convert to data entry
+            udx_db_data_entry *data_entry = udx_db_load_data(iter->db, key_entry);
 
-            // Free the index entry (from_index copies contents, so we own everything)
-            udx_entry_free(index_entry);
+            // Free the key entry (udx_db_load_data copies contents, so we own everything)
+            udx_key_entry_free(key_entry);
 
-            if (db_entry == NULL) {
+            if (data_entry == NULL) {
                 return NULL;
             }
 
-            // Move db_entry contents to iter->current_entry
-            iter->current_entry.word = db_entry->word;
-            iter->current_entry.items = db_entry->items;
-            free(db_entry);  // Free wrapper, contents now owned by current_entry
+            // Move data_entry contents to iter->current_entry
+            iter->current_entry.key = data_entry->key;
+            iter->current_entry.items = data_entry->items;
+            free(data_entry);  // Free wrapper, contents now owned by current_entry
 
             return &iter->current_entry;
         }

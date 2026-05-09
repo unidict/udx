@@ -7,7 +7,7 @@
 
 #include "udx_writer.h"
 #include "udx_types.h"
-#include "udx_words.h"
+#include "udx_keys.h"
 #include "udx_chunk.h"
 #include "udx_utils.h"
 #include <zlib.h>
@@ -32,7 +32,7 @@ struct udx_writer {
 struct udx_db_builder {
     udx_writer *writer;               // Back reference to file writer
     udx_chunk_writer *chunk_writer;
-    udx_words *words;
+    udx_keys *keys;
     uint64_t db_offset;               // Position of this db block
     uint32_t metadata_size;           // Size of metadata (0 if not set)
     uint64_t index_root_offset;
@@ -97,7 +97,7 @@ static uint64_t write_index_node(FILE *file, const uint8_t *data, size_t size) {
 
 typedef struct {
     FILE *file;
-    udx_words_iter *iter;
+    udx_keys_iter *iter;
     uint64_t last_leaf_link_offset;  // For back-patching next_leaf
     uint64_t first_leaf_offset;
     uint32_t max_elements;
@@ -107,23 +107,23 @@ typedef struct {
 static uint64_t build_bptree_node(bptree_build_context *ctx, size_t index_size, uint8_t *out_height);
 
 // Serialize an index entry directly into a dynamic buffer, returning bytes written or 0 on failure.
-static size_t serialize_index_entry_into(const udx_index_entry *entry,
+static size_t serialize_index_entry_into(const udx_db_key_entry *entry,
                                          uint8_t **buffer, size_t *buffer_size, size_t *buffer_capacity) {
-    // Format: [folded_word\0] [item_count:u16] [items...]
-    //   item: [original_word\0] [address:u64] [data_size:u32]
+    // Format: [folded_key\0] [item_count:u16] [items...]
+    //   item: [original_key\0] [address:u64] [data_size:u32]
 
     if (entry->items.size > UINT16_MAX) return 0;
 
     // Calculate required size
-    size_t word_len = strlen(entry->word) + 1;
+    size_t key_len = strlen(entry->key) + 1;
     uint16_t item_count = (uint16_t)entry->items.size;
     size_t items_size = 0;
     for (size_t i = 0; i < entry->items.size; i++) {
-        items_size += strlen(entry->items.data[i].original_word) + 1;
-        items_size += sizeof(udx_chunk_address);
+        items_size += strlen(entry->items.data[i].original_key) + 1;
+        items_size += sizeof(udx_data_address);
         items_size += sizeof(uint32_t);  // data_size
     }
-    size_t total_size = word_len + sizeof(uint16_t) + items_size;
+    size_t total_size = key_len + sizeof(uint16_t) + items_size;
 
     // Ensure buffer capacity
     size_t needed = *buffer_size + total_size;
@@ -140,9 +140,9 @@ static size_t serialize_index_entry_into(const udx_index_entry *entry,
 
     uint8_t *ptr = *buffer + *buffer_size;
 
-    // folded_word
-    memcpy(ptr, entry->word, word_len);
-    ptr += word_len;
+    // folded_key
+    memcpy(ptr, entry->key, key_len);
+    ptr += key_len;
 
     // item_count
     memcpy(ptr, &item_count, sizeof(uint16_t));
@@ -150,12 +150,12 @@ static size_t serialize_index_entry_into(const udx_index_entry *entry,
 
     // items
     for (size_t i = 0; i < entry->items.size; i++) {
-        const udx_index_entry_item *item = &entry->items.data[i];
-        size_t original_len = strlen(item->original_word) + 1;
-        memcpy(ptr, item->original_word, original_len);
+        const udx_key_entry_item *item = &entry->items.data[i];
+        size_t original_len = strlen(item->original_key) + 1;
+        memcpy(ptr, item->original_key, original_len);
         ptr += original_len;
-        memcpy(ptr, &item->data_address, sizeof(udx_chunk_address));
-        ptr += sizeof(udx_chunk_address);
+        memcpy(ptr, &item->data_address, sizeof(udx_data_address));
+        ptr += sizeof(udx_data_address);
         memcpy(ptr, &item->data_size, sizeof(uint32_t));
         ptr += sizeof(uint32_t);
     }
@@ -185,7 +185,7 @@ static uint64_t build_leaf_node(bptree_build_context *ctx, size_t index_size, ui
 
     // Append serialized entries
     for (size_t i = 0; i < index_size; i++) {
-        const udx_index_entry *entry = udx_words_iter_next(ctx->iter);
+        const udx_db_key_entry *entry = udx_keys_iter_next(ctx->iter);
         if (entry == NULL) {
             free(buffer);
             return 0;
@@ -272,9 +272,9 @@ static uint64_t build_bptree_node(bptree_build_context *ctx, size_t index_size, 
         if (child_height > max_child_height) max_child_height = child_height;
 
         // Record separator key: peek at iterator's current position
-        const udx_index_entry *next_entry = udx_words_iter_peek(ctx->iter);
+        const udx_db_key_entry *next_entry = udx_keys_iter_peek(ctx->iter);
         if (next_entry == NULL) goto cleanup;
-        keys[x] = udx_str_dup(next_entry->word);
+        keys[x] = udx_str_dup(next_entry->key);
         if (keys[x] == NULL) goto cleanup;
 
         prev_entry = cur_entry;
@@ -330,16 +330,16 @@ cleanup:
 }
 
 static bool build_bptree(udx_db_builder *db_builder) {
-    size_t word_count = udx_words_count(db_builder->words);
+    size_t key_count = udx_keys_count(db_builder->keys);
     // Note: validations (empty, overflow) are done in udx_db_builder_finalize before calling this
 
     // Calculate max_elements (GoldenDict style)
-    uint32_t max_elements = (uint32_t)(sqrt((double)word_count) + 1);
+    uint32_t max_elements = (uint32_t)(sqrt((double)key_count) + 1);
     if (max_elements < UDX_NODE_MIN_ELEMENTS) max_elements = UDX_NODE_MIN_ELEMENTS;
     if (max_elements > UDX_NODE_MAX_ELEMENTS) max_elements = UDX_NODE_MAX_ELEMENTS;
 
     // Create iterator
-    udx_words_iter *iter = udx_words_iter_create(db_builder->words);
+    udx_keys_iter *iter = udx_keys_iter_create(db_builder->keys);
     if (iter == NULL) return false;
 
     // Initialize build context
@@ -350,9 +350,9 @@ static bool build_bptree(udx_db_builder *db_builder) {
 
     // Build recursively
     uint8_t tree_height = 0;
-    uint64_t root_offset = build_bptree_node(&ctx, word_count, &tree_height);
+    uint64_t root_offset = build_bptree_node(&ctx, key_count, &tree_height);
 
-    udx_words_iter_destroy(iter);
+    udx_keys_iter_destroy(iter);
 
     if (root_offset == 0) return false;
 
@@ -529,8 +529,8 @@ udx_db_builder *udx_db_builder_create_with_metadata(udx_writer *writer,
     }
     db_builder->db_offset = (uint64_t)offset;
 
-    db_builder->words = udx_words_create();
-    if (db_builder->words == NULL) {
+    db_builder->keys = udx_keys_create();
+    if (db_builder->keys == NULL) {
         goto error;
     }
 
@@ -575,7 +575,7 @@ udx_db_builder *udx_db_builder_create_with_metadata(udx_writer *writer,
 
 error:
     if (db_builder->chunk_writer) udx_chunk_writer_close(db_builder->chunk_writer);
-    if (db_builder->words) udx_words_destroy(db_builder->words);
+    if (db_builder->keys) udx_keys_destroy(db_builder->keys);
     // Seek file pointer back to the position before this db, so that
     // subsequent operations start from a clean position.
     if (db_builder->db_offset > 0) {
@@ -593,16 +593,16 @@ udx_error_t udx_db_builder_finalize(udx_db_builder *builder) {
     udx_writer *writer = builder->writer;
     udx_error_t result = UDX_OK;
 
-    // Validate word count
-    size_t word_count = udx_words_count(builder->words);
-    size_t item_count = udx_words_item_count(builder->words);
+    // Validate key count
+    size_t key_count = udx_keys_count(builder->keys);
+    size_t item_count = udx_keys_item_count(builder->keys);
 
-    if (word_count == 0) {
+    if (key_count == 0) {
         result = UDX_ERR_INVALID_PARAM;  // Empty databases not allowed
         goto cleanup;
     }
-    if (word_count > UINT32_MAX) {
-        result = UDX_ERR_OVERFLOW;  // Too many words for header field
+    if (key_count > UINT32_MAX) {
+        result = UDX_ERR_OVERFLOW;  // Too many keys for header field
         goto cleanup;
     }
     if (item_count > UINT32_MAX) {
@@ -629,7 +629,7 @@ udx_error_t udx_db_builder_finalize(udx_db_builder *builder) {
     header.chunk_table_offset = chunks_offset;
     header.index_root_offset = builder->index_root_offset;
     header.index_first_leaf_offset = builder->index_first_leaf_offset;
-    header.index_entry_count = (uint32_t)word_count;
+    header.index_entry_count = (uint32_t)key_count;
     header.index_item_count = (uint32_t)item_count;
     header.index_bptree_height = builder->index_bptree_height;
 
@@ -678,27 +678,27 @@ cleanup:
     }
 
     udx_chunk_writer_close(builder->chunk_writer);
-    udx_words_destroy(builder->words);
+    udx_keys_destroy(builder->keys);
     free(builder);
 
     return result;
 }
 
 udx_error_t udx_db_builder_add_entry(udx_db_builder *builder,
-                           const char *word,
+                           const char *key,
                            const uint8_t *data,
                            uint32_t data_size) {
-    if (builder == NULL || word == NULL || data == NULL) {
+    if (builder == NULL || key == NULL || data == NULL) {
         return UDX_ERR_INVALID_PARAM;
     }
 
-    udx_chunk_address address = udx_chunk_writer_add_block(builder->chunk_writer, data, data_size);
+    udx_data_address address = udx_chunk_writer_add_block(builder->chunk_writer, data, data_size);
     if (address == UDX_INVALID_ADDRESS) return UDX_ERR_CHUNK;
 
-    return udx_words_add(builder->words, word, address, data_size) ? UDX_OK : UDX_ERR_WORDS;
+    return udx_keys_add(builder->keys, key, address, data_size) ? UDX_OK : UDX_ERR_KEYS;
 }
 
-udx_chunk_address udx_db_builder_add_chunk_block(udx_db_builder *builder,
+udx_data_address udx_db_builder_add_data(udx_db_builder *builder,
                                                   const uint8_t *data,
                                                   uint32_t data_size) {
     if (builder == NULL || data == NULL) {
@@ -708,11 +708,11 @@ udx_chunk_address udx_db_builder_add_chunk_block(udx_db_builder *builder,
     return udx_chunk_writer_add_block(builder->chunk_writer, data, data_size);
 }
 
-udx_error_t udx_db_builder_add_word_entry(udx_db_builder *builder,
-                                          const char *word,
-                                          udx_chunk_address data_address,
+udx_error_t udx_db_builder_add_key_entry(udx_db_builder *builder,
+                                          const char *key,
+                                          udx_data_address data_address,
                                           uint32_t data_size) {
-    if (builder == NULL || word == NULL) {
+    if (builder == NULL || key == NULL) {
         return UDX_ERR_INVALID_PARAM;
     }
 
@@ -720,6 +720,6 @@ udx_error_t udx_db_builder_add_word_entry(udx_db_builder *builder,
         return UDX_ERR_INVALID_PARAM;
     }
 
-    return udx_words_add(builder->words, word, data_address, data_size) ? UDX_OK : UDX_ERR_WORDS;
+    return udx_keys_add(builder->keys, key, data_address, data_size) ? UDX_OK : UDX_ERR_KEYS;
 }
 

@@ -75,14 +75,14 @@ const char *udx_db_get_name(const udx_db *db);
 const uint8_t *udx_db_get_metadata(const udx_db *db, uint32_t *out_size);
 
 /**
- * Get the number of index entries
+ * Get the number of unique keys
  */
-uint32_t udx_db_get_index_entry_count(const udx_db *db);
+uint32_t udx_db_get_key_count(const udx_db *db);
 
 /**
- * Get the total number of items across all entries
+ * Get the total number of items across all keys
  */
-uint32_t udx_db_get_index_item_count(const udx_db *db);
+uint32_t udx_db_get_item_count(const udx_db *db);
 
 /**
  * Get the B+ tree height
@@ -94,50 +94,50 @@ uint32_t udx_db_get_index_bptree_height(const udx_db *db);
 // ============================================================
 
 /**
- * Look up a single word in db (index only, no data loaded)
+ * Look up a single key in db (index only, no data loaded)
  * @param db Db pointer
- * @param word Word to look up
- * @return Index entry pointer (caller must free with udx_entry_free), or NULL if not found
+ * @param key Key to look up
+ * @return Index entry pointer (caller must free with udx_key_entry_free), or NULL if not found
  *
  * @note This is faster than udx_db_lookup as it doesn't load data
- * @note Use udx_db_entry_from_index() to load data for specific items
+ * @note Use udx_db_load_data() to load data for specific items
  */
-udx_index_entry *udx_db_index_lookup(udx_db *db, const char *word);
+udx_db_key_entry *udx_db_index_lookup(udx_db *db, const char *key);
 
 /**
  * Prefix match in db (index only, no data loaded)
  * @param db Db pointer
  * @param prefix Prefix to match
  * @param max_results Maximum number of results (0 = unlimited)
- * @return Array of index entries (caller must free with udx_index_entry_array_free_contents)
+ * @return Array of index entries (caller must free with udx_key_entry_array_free_contents)
  *
  * @note This is useful for autocomplete/suggestion features
- * @note Returns entries with addresses only, use udx_db_entry_from_index() to load data
+ * @note Returns entries with addresses only, use udx_db_load_data() to load data
  */
-udx_index_entry_array udx_db_index_prefix_match(udx_db *db, const char *prefix, size_t max_results);
+udx_key_entry_array udx_db_index_prefix_match(udx_db *db, const char *prefix, size_t max_results);
 
 /**
  * Load data for an index entry
  * @param db Db pointer
- * @param index_entry Index entry (with addresses) returned from index lookup
- * @return Db entry with data loaded (caller must free with udx_db_entry_free), or NULL on error
+ * @param key_entry Key entry (with addresses) returned from index lookup
+ * @return Db entry with data loaded (caller must free with udx_data_entry_free), or NULL on error
  *
- * @note This function loads data for all items in the index entry
- * @note The index_entry is still valid after this call (ownership is not transferred)
+ * @note This function loads data for all items in the key entry
+ * @note The key_entry is still valid after this call (ownership is not transferred)
  */
-udx_db_entry *udx_db_entry_from_index(udx_db *db, const udx_index_entry *index_entry);
+udx_db_data_entry *udx_db_load_data(udx_db *db, const udx_db_key_entry *key_entry);
 
 // ============================================================
 // Full Data Lookup (returns entries with data loaded)
 // ============================================================
 
 /**
- * Look up a single word in db (with data loaded)
+ * Look up a single key in db (with data loaded)
  * @param db Db pointer
- * @param word Word to look up
- * @return Db entry pointer (caller must free with udx_db_entry_free), or NULL if not found
+ * @param key Key to look up
+ * @return Db entry pointer (caller must free with udx_data_entry_free), or NULL if not found
  */
-udx_db_entry *udx_db_lookup(udx_db *db, const char *word);
+udx_db_data_entry *udx_db_lookup(udx_db *db, const char *key);
 
 // ============================================================
 // Iterator
@@ -172,7 +172,7 @@ void udx_db_iter_destroy(udx_db_iter *iter);
  *       or until udx_db_iter_destroy() is called.
  *       If you need to persist the data, make a deep copy before the next iteration.
  */
-const udx_db_entry *udx_db_iter_next(udx_db_iter *iter);
+const udx_db_data_entry *udx_db_iter_next(udx_db_iter *iter);
 
 #ifdef __cplusplus
 }

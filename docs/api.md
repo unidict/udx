@@ -118,7 +118,7 @@ Create a database builder with metadata.
 
 ```c
 udx_error_t udx_db_builder_add_entry(udx_db_builder *builder,
-                                     const char *word,
+                                     const char *key,
                                      const uint8_t *data,
                                      size_t data_size);
 ```
@@ -127,7 +127,7 @@ Add an entry to the database.
 
 **Parameters:**
 - `builder` - Builder pointer
-- `word` - Word string (UTF-8, will be folded for case-insensitive lookup)
+- `key` - Key string (UTF-8, will be folded for case-insensitive lookup)
 - `data` - Data bytes
 - `data_size` - Size of data in bytes (must not exceed `UINT32_MAX`)
 
@@ -135,11 +135,11 @@ Add an entry to the database.
 - `UDX_OK` on success, error code on failure:
   - `UDX_ERR_INVALID_PARAM`: invalid parameter
   - `UDX_ERR_CHUNK`: chunk writer failed
-  - `UDX_ERR_WORDS`: words container failed
+  - `UDX_ERR_KEYS`: keys container failed
 
 **Notes:**
-- Multiple entries can be added under the same word
-- The original word case is preserved
+- Multiple entries can be added under the same key
+- The original key case is preserved
 
 ---
 
@@ -315,29 +315,29 @@ Get the metadata.
 
 ---
 
-#### `udx_db_get_index_entry_count()`
+#### `udx_db_get_key_count()`
 
 ```c
-uint32_t udx_db_get_index_entry_count(const udx_db *db);
+uint32_t udx_db_get_key_count(const udx_db *db);
 ```
 
-Get the number of index entries.
+Get the number of unique keys in the database.
 
 **Parameters:**
 - `db` - Database pointer
 
 **Return:**
-- Number of unique words in the database
+- Number of unique keys in the database
 
 ---
 
-#### `udx_db_get_index_item_count()`
+#### `udx_db_get_item_count()`
 
 ```c
-uint32_t udx_db_get_index_item_count(const udx_db *db);
+uint32_t udx_db_get_item_count(const udx_db *db);
 ```
 
-Get the total number of items across all entries.
+Get the total number of items across all keys.
 
 **Parameters:**
 - `db` - Database pointer
@@ -370,28 +370,28 @@ Index lookup functions return entries with addresses only, without loading the a
 #### `udx_db_index_lookup()`
 
 ```c
-udx_index_entry *udx_db_index_lookup(udx_db *db, const char *word);
+udx_db_key_entry *udx_db_index_lookup(udx_db *db, const char *key);
 ```
 
-Look up a single word in database (index only, no data loaded).
+Look up a single key in database (index only, no data loaded).
 
 **Parameters:**
 - `db` - Database pointer
-- `word` - Word to look up
+- `key` - Key to look up
 
 **Return:**
-- Index entry pointer (caller must free with `udx_entry_free`), or `NULL` if not found
+- Index entry pointer (caller must free with `udx_key_entry_free`), or `NULL` if not found
 
 **Notes:**
 - This is faster than `udx_db_lookup` as it doesn't load data
-- Use `udx_db_entry_from_index()` to load data for specific items
+- Use `udx_db_load_data()` to load data for specific items
 
 ---
 
 #### `udx_db_index_prefix_match()`
 
 ```c
-udx_index_entry_array udx_db_index_prefix_match(udx_db *db, const char *prefix, size_t max_results);
+udx_key_entry_array udx_db_index_prefix_match(udx_db *db, const char *prefix, size_t max_results);
 ```
 
 Prefix match in database (index only, no data loaded).
@@ -402,18 +402,18 @@ Prefix match in database (index only, no data loaded).
 - `max_results` - Maximum number of results (0 = unlimited)
 
 **Return:**
-- Array of index entries (caller must free with `udx_index_entry_array_free_contents`)
+- Array of index entries (caller must free with `udx_key_entry_array_free_contents`)
 
 **Notes:**
 - This is useful for autocomplete/suggestion features
-- Returns entries with addresses only, use `udx_db_entry_from_index()` to load data
+- Returns entries with addresses only, use `udx_db_load_data()` to load data
 
 ---
 
-#### `udx_db_entry_from_index()`
+#### `udx_db_load_data()`
 
 ```c
-udx_db_entry *udx_db_entry_from_index(udx_db *db, const udx_index_entry *index_entry);
+udx_db_data_entry *udx_db_load_data(udx_db *db, const udx_db_key_entry *index_entry);
 ```
 
 Load data for an index entry.
@@ -423,7 +423,7 @@ Load data for an index entry.
 - `index_entry` - Index entry (with addresses) returned from index lookup
 
 **Return:**
-- Database entry with data loaded (caller must free with `udx_db_entry_free`), or `NULL` on error
+- Database entry with data loaded (caller must free with `udx_data_entry_free`), or `NULL` on error
 
 **Notes:**
 - This function loads data for all items in the index entry
@@ -438,17 +438,17 @@ Full data lookup functions return entries with all data loaded.
 #### `udx_db_lookup()`
 
 ```c
-udx_db_entry *udx_db_lookup(udx_db *db, const char *word);
+udx_db_data_entry *udx_db_lookup(udx_db *db, const char *key);
 ```
 
-Look up a single word in database (with data loaded).
+Look up a single key in database (with data loaded).
 
 **Parameters:**
 - `db` - Database pointer
-- `word` - Word to look up
+- `key` - Key to look up
 
 **Return:**
-- Database entry pointer (caller must free with `udx_db_entry_free`), or `NULL` if not found
+- Database entry pointer (caller must free with `udx_data_entry_free`), or `NULL` if not found
 
 ---
 
@@ -496,7 +496,7 @@ Destroy an iterator.
 #### `udx_db_iter_next()`
 
 ```c
-const udx_db_entry *udx_db_iter_next(udx_db_iter *iter);
+const udx_db_data_entry *udx_db_iter_next(udx_db_iter *iter);
 ```
 
 Get the next entry.
@@ -519,12 +519,12 @@ Get the next entry.
 
 See `udx_types.h` for the complete definition of data types used in the API, including:
 
-- `udx_index_entry` - Index entry with addresses (no data)
-- `udx_db_entry` - Database entry with data loaded
-- `udx_index_entry_array` - Array of index entries
-- `udx_chunk_address` - Address encoding (chunk index + offset)
+- `udx_db_key_entry` - Index entry with addresses (no data)
+- `udx_db_data_entry` - Database entry with data loaded
+- `udx_key_entry_array` - Array of index entries
+- `udx_data_address` - Address encoding (chunk index + offset)
 
 Memory management functions:
-- `udx_entry_free()` - Free an index entry
-- `udx_db_entry_free()` - Free a database entry
-- `udx_index_entry_array_free_contents()` - Free array contents
+- `udx_key_entry_free()` - Free an index entry
+- `udx_data_entry_free()` - Free a database entry
+- `udx_key_entry_array_free_contents()` - Free array contents
