@@ -789,7 +789,7 @@ static uint8_t *udx_db_get_data(udx_db *db, udx_value_address address, uint32_t 
  * Convert udx_db_key_entry to udx_db_value_entry
  * Loads all items for the key
  */
-udx_db_value_entry *udx_db_load_value(udx_db *db, const udx_db_key_entry *key_entry) {
+udx_db_value_entry *udx_db_lookup_by_key_entry(udx_db *db, const udx_db_key_entry *key_entry) {
     if (key_entry == NULL || key_entry->items.size == 0) {
         return NULL;
     }
@@ -856,7 +856,7 @@ udx_db_value_entry *udx_db_lookup(udx_db *db, const char *key) {
     }
 
     // Convert to data entry
-    udx_db_value_entry *value_entry = udx_db_load_value(db, key_entry);
+    udx_db_value_entry *value_entry = udx_db_lookup_by_key_entry(db, key_entry);
 
     // Free key_entry
     udx_key_entry_free(key_entry);
@@ -1143,9 +1143,9 @@ const udx_db_value_entry *udx_db_iter_next(udx_db_iter *iter) {
             iter->current_index++;
 
             // Convert to data entry
-            udx_db_value_entry *value_entry = udx_db_load_value(iter->db, key_entry);
+            udx_db_value_entry *value_entry = udx_db_lookup_by_key_entry(iter->db, key_entry);
 
-            // Free the key entry (udx_db_load_value copies contents, so we own everything)
+            // Free the key entry (udx_db_lookup_by_key_entry copies contents, so we own everything)
             udx_key_entry_free(key_entry);
 
             if (value_entry == NULL) {
