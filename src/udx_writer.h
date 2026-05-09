@@ -97,10 +97,10 @@ udx_error_t udx_db_builder_finalize(udx_db_builder *builder);
  * Add an entry to the database
  * @param builder Builder pointer
  * @param key Key string (UTF-8, will be folded for case-insensitive lookup)
- * @param data Data bytes
- * @param data_size Size of data in bytes (maximum: 4 GB, recommended: < 64 KB)
+ * @param value Value bytes
+ * @param value_size Size of value in bytes (maximum: 4 GB, recommended: < 64 KB)
  * @return UDX_OK on success, error code on failure:
- *         UDX_ERR_INVALID_PARAM: invalid parameter or data_size exceeds maximum
+ *         UDX_ERR_INVALID_PARAM: invalid parameter or value_size exceeds maximum
  *         UDX_ERR_CHUNK: chunk writer failed
  *         UDX_ERR_KEYS: keys container failed
  *
@@ -128,14 +128,14 @@ udx_error_t udx_db_builder_finalize(udx_db_builder *builder);
  */
 udx_error_t udx_db_builder_add_entry(udx_db_builder *builder,
                            const char *key,
-                           const uint8_t *data,
-                           uint32_t data_size);
+                           const uint8_t *value,
+                           uint32_t value_size);
 
 /**
- * @brief Add data chunk to storage (returns address for key entries)
+ * @brief Store value in chunk storage (returns address for key entries)
  * @param builder Builder pointer
- * @param data Data bytes
- * @param data_size Size of data in bytes (maximum: 4 GB, recommended: < 64 KB)
+ * @param value Value bytes
+ * @param value_size Size of value in bytes (maximum: 4 GB, recommended: < 64 KB)
  * @return Value address on success, UDX_INVALID_ADDRESS on failure
  *
  * @note This function only writes data to chunk storage
@@ -166,15 +166,15 @@ udx_error_t udx_db_builder_add_entry(udx_db_builder *builder,
  * @endcode
  */
 udx_value_address udx_db_builder_add_value(udx_db_builder *builder,
-                                                  const uint8_t *data,
-                                                  uint32_t data_size);
+                                                  const uint8_t *value,
+                                                  uint32_t value_size);
 
 /**
- * @brief Add key entry referencing existing chunk data
+ * @brief Add key entry referencing stored value
  * @param builder Builder pointer
  * @param key Key string (UTF-8, will be folded for case-insensitive lookup)
  * @param value_address Address of data in chunk storage (from udx_db_builder_add_value)
- * @param data_size Size of data in bytes
+ * @param value_size Size of value in bytes
  * @return UDX_OK on success, error code on failure:
  *         UDX_ERR_INVALID_PARAM: invalid parameter
  *         UDX_ERR_KEYS: keys container failed
@@ -218,7 +218,7 @@ udx_value_address udx_db_builder_add_value(udx_db_builder *builder,
 udx_error_t udx_db_builder_add_key_entry(udx_db_builder *builder,
                                           const char *key,
                                           udx_value_address value_address,
-                                          uint32_t data_size);
+                                          uint32_t value_size);
 
 
 #ifdef __cplusplus

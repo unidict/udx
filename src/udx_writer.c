@@ -686,32 +686,32 @@ cleanup:
 
 udx_error_t udx_db_builder_add_entry(udx_db_builder *builder,
                            const char *key,
-                           const uint8_t *data,
-                           uint32_t data_size) {
-    if (builder == NULL || key == NULL || data == NULL) {
+                           const uint8_t *value,
+                           uint32_t value_size) {
+    if (builder == NULL || key == NULL || value == NULL) {
         return UDX_ERR_INVALID_PARAM;
     }
 
-    udx_value_address address = udx_chunk_writer_add_block(builder->chunk_writer, data, data_size);
+    udx_value_address address = udx_chunk_writer_add_block(builder->chunk_writer, value, value_size);
     if (address == UDX_INVALID_ADDRESS) return UDX_ERR_CHUNK;
 
-    return udx_keys_add(builder->keys, key, address, data_size) ? UDX_OK : UDX_ERR_KEYS;
+    return udx_keys_add(builder->keys, key, address, value_size) ? UDX_OK : UDX_ERR_KEYS;
 }
 
 udx_value_address udx_db_builder_add_value(udx_db_builder *builder,
-                                                  const uint8_t *data,
-                                                  uint32_t data_size) {
-    if (builder == NULL || data == NULL) {
+                                                  const uint8_t *value,
+                                                  uint32_t value_size) {
+    if (builder == NULL || value == NULL) {
         return UDX_INVALID_ADDRESS;
     }
 
-    return udx_chunk_writer_add_block(builder->chunk_writer, data, data_size);
+    return udx_chunk_writer_add_block(builder->chunk_writer, value, value_size);
 }
 
 udx_error_t udx_db_builder_add_key_entry(udx_db_builder *builder,
                                           const char *key,
                                           udx_value_address value_address,
-                                          uint32_t data_size) {
+                                          uint32_t value_size) {
     if (builder == NULL || key == NULL) {
         return UDX_ERR_INVALID_PARAM;
     }
@@ -720,6 +720,6 @@ udx_error_t udx_db_builder_add_key_entry(udx_db_builder *builder,
         return UDX_ERR_INVALID_PARAM;
     }
 
-    return udx_keys_add(builder->keys, key, value_address, data_size) ? UDX_OK : UDX_ERR_KEYS;
+    return udx_keys_add(builder->keys, key, value_address, value_size) ? UDX_OK : UDX_ERR_KEYS;
 }
 

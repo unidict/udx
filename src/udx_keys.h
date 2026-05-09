@@ -46,7 +46,7 @@ void udx_keys_destroy(udx_keys *keys);
  * @param keys Container pointer
  * @param key Key (UTF-8)
  * @param value_address Value address
- * @param data_size Data size in bytes
+ * @param value_size Value size in bytes
  * @return true on success, false on failure
  *
  * @note The key will be folded (lowercased, etc.) for sorting and lookup
