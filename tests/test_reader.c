@@ -158,8 +158,8 @@ void test_reader_iterator(void) {
     udx_db_iter* iter = udx_db_iter_create(db);
     TEST_ASSERT_NOT_NULL(iter);
 
-    // Should iterate through all 2 unique words: "hello" (with 2 items) and "test" (with 1 item)
-    const udx_db_value_entry* entry;
+    // Should iterate through all 2 unique key entries: "hello" (with 2 items) and "test" (with 1 item)
+    const udx_db_key_entry* entry;
 
     // First entry: "hello" with 2 items
     entry = udx_db_iter_next(iter);

@@ -332,14 +332,12 @@ static size_t parse_entry(const uint8_t *data, size_t available, udx_db_key_entr
             const char *original_key = (const char *)ptr;
             size_t original_len = strlen(original_key) + 1;
             if (ptr + original_len + sizeof(udx_value_address) + sizeof(uint32_t) > end) {
-                udx_db_key_entry_free_contents(entry);
-                free(entry);
+                udx_db_key_entry_free(entry);
                 return 0;
             }
             char *original_copy = strdup(original_key);
             if (original_copy == NULL) {
-                udx_db_key_entry_free_contents(entry);
-                free(entry);
+                udx_db_key_entry_free(entry);
                 return 0;
             }
             ptr += original_len;
@@ -1060,7 +1058,7 @@ struct udx_db_iter {
     const uint8_t *current_ptr;   // Current entry data pointer
 
     // Current entry (returned to caller)
-    udx_db_value_entry current_entry;
+    udx_db_key_entry current_entry;
 };
 
 udx_db_iter *udx_db_iter_create(udx_db *db) {
@@ -1070,8 +1068,6 @@ udx_db_iter *udx_db_iter_create(udx_db *db) {
     if (iter == NULL) return NULL;
 
     iter->db = db;
-    udx_db_value_entry_item_array_init(&iter->current_entry.items);
-    iter->current_entry.key = NULL;
 
     // Read first leaf node
     iter->leaf_node = read_index_node(db, db->header.index_first_leaf_offset);
@@ -1101,18 +1097,16 @@ udx_db_iter *udx_db_iter_create(udx_db *db) {
 void udx_db_iter_destroy(udx_db_iter *iter) {
     if (iter == NULL) return;
 
-    udx_db_value_entry_free_contents(&iter->current_entry);
+    udx_db_key_entry_free_contents(&iter->current_entry);
     free_node(iter->leaf_node);
     free(iter);
 }
 
-const udx_db_value_entry *udx_db_iter_next(udx_db_iter *iter) {
+const udx_db_key_entry *udx_db_iter_next(udx_db_iter *iter) {
     if (iter == NULL) return NULL;
 
     // Free previous entry
-    udx_db_value_entry_free_contents(&iter->current_entry);
-    iter->current_entry.key = NULL;
-    udx_db_value_entry_item_array_init(&iter->current_entry.items);
+    udx_db_key_entry_free_contents(&iter->current_entry);
 
     // Traverse until we find the next entry
     while (true) {
@@ -1132,20 +1126,9 @@ const udx_db_value_entry *udx_db_iter_next(udx_db_iter *iter) {
             iter->current_ptr += entry_size;
             iter->current_index++;
 
-            // Convert to data entry
-            udx_db_value_entry *value_entry = udx_db_lookup_by_key_entry(iter->db, key_entry);
-
-            // Free the key entry (udx_db_lookup_by_key_entry copies contents, so we own everything)
-            udx_db_key_entry_free(key_entry);
-
-            if (value_entry == NULL) {
-                return NULL;
-            }
-
-            // Move value_entry contents to iter->current_entry
-            iter->current_entry.key = value_entry->key;
-            iter->current_entry.items = value_entry->items;
-            free(value_entry);  // Free wrapper, contents now owned by current_entry
+            // Transfer ownership of key_entry internals to current_entry
+            iter->current_entry = *key_entry;
+            free(key_entry);  // Free wrapper only, contents now owned by current_entry
 
             return &iter->current_entry;
         }

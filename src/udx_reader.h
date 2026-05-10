@@ -110,7 +110,7 @@ udx_db_value_entry *udx_db_lookup_by_key_entry(udx_db *db, const udx_db_key_entr
 
 udx_db_iter *udx_db_iter_create(udx_db *db);
 void udx_db_iter_destroy(udx_db_iter *iter);
-const udx_db_value_entry *udx_db_iter_next(udx_db_iter *iter);
+const udx_db_key_entry *udx_db_iter_next(udx_db_iter *iter);
 
 #ifdef __cplusplus
 }

@@ -199,9 +199,8 @@ typedef struct {
 // Free entry's internal fields without freeing the entry struct itself.
 // Use when the entry is stack-allocated or embedded in another struct.
 void udx_db_key_entry_free_contents(udx_db_key_entry *entry);
-void udx_db_value_entry_free_contents(udx_db_value_entry *entry);
 
-// Free entry's internal fields AND the entry struct itself (calls free_contents + free).
+// Free entry's internal fields AND the entry struct itself.
 // Use when the entry was heap-allocated (returned by lookup functions).
 void udx_db_key_entry_free(udx_db_key_entry *entry);
 void udx_db_value_entry_free(udx_db_value_entry *entry);
