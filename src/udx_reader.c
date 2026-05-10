@@ -319,9 +319,9 @@ static size_t parse_entry(const uint8_t *data, size_t available, udx_db_key_entr
         return 0;
     }
 
-    udx_key_entry_item_array_init(&entry->items);
+    udx_db_key_entry_item_array_init(&entry->items);
     if (item_count > 0) {
-        if (!udx_key_entry_item_array_reserve(&entry->items, item_count)) {
+        if (!udx_db_key_entry_item_array_reserve(&entry->items, item_count)) {
             free(entry->key);
             free(entry);
             return 0;
@@ -359,7 +359,7 @@ static size_t parse_entry(const uint8_t *data, size_t available, udx_db_key_entr
             item.original_key = original_copy;
             item.value_address = address;
             item.data_size = data_size;
-            udx_key_entry_item_array_push(&entry->items, item);
+            udx_db_key_entry_item_array_push(&entry->items, item);
         }
     }
 
@@ -639,10 +639,10 @@ udx_db_key_entry *udx_db_key_entry_lookup(udx_db *db, const char *key) {
     return entry;
 }
 
-udx_key_entry_array udx_db_key_entry_prefix_match(udx_db *db, const char *prefix,
-                                                         size_t max_results) {
-    udx_key_entry_array result;
-    udx_key_entry_array_init(&result);
+udx_db_key_entry_array udx_db_key_entry_prefix_match(udx_db *db, const char *prefix,
+                                                         size_t limit) {
+    udx_db_key_entry_array result;
+    udx_db_key_entry_array_init(&result);
 
     if (db == NULL || prefix == NULL) return result;
 
@@ -692,8 +692,8 @@ udx_key_entry_array udx_db_key_entry_prefix_match(udx_db *db, const char *prefix
     size_t key_len = strlen(key);
 
     // Reserve initial capacity
-    size_t initial_capacity = (max_results > 0 && max_results < 64) ? max_results : 64;
-    if (!udx_key_entry_array_reserve(&result, initial_capacity)) {
+    size_t initial_capacity = (limit > 0 && limit < 64) ? limit : 64;
+    if (!udx_db_key_entry_array_reserve(&result, initial_capacity)) {
         if (!is_root) free_node(current_node);
         free(key);
         return result;
@@ -716,18 +716,18 @@ udx_key_entry_array udx_db_key_entry_prefix_match(udx_db *db, const char *prefix
             size_t entry_size = parse_entry(current, node_end - current, &entry);
             if (entry_size == 0 || entry == NULL) {
                 if (!is_root) free_node(current_node);
-                udx_key_entry_array_free_contents(&result);
-                udx_key_entry_array_init(&result);
+                udx_db_key_entry_array_free_contents(&result);
+                udx_db_key_entry_array_init(&result);
                 free(key);
                 return result;
             }
 
             // Add entry to result
-            udx_key_entry_array_push(&result, *entry);
+            udx_db_key_entry_array_push(&result, *entry);
             free(entry);  // Free wrapper, key and addresses are now owned by result
 
-            // Check max_results
-            if (max_results > 0 && result.size >= max_results) {
+            // Check limit
+            if (limit > 0 && result.size >= limit) {
                 // Collected enough, stop completely
                 goto cleanup;
             }
@@ -744,7 +744,7 @@ udx_key_entry_array udx_db_key_entry_prefix_match(udx_db *db, const char *prefix
 
         // Try to continue to next leaf
         if (next_leaf == 0) break;
-        if (max_results > 0 && result.size >= max_results) break;
+        if (limit > 0 && result.size >= limit) break;
 
         // Read next leaf
         udx_index_node *next_node = read_index_node(db, next_leaf);
@@ -805,10 +805,10 @@ udx_db_value_entry *udx_db_lookup_by_key_entry(udx_db *db, const udx_db_key_entr
         return NULL;
     }
 
-    udx_value_entry_item_array_init(&value_entry->items);
+    udx_db_value_entry_item_array_init(&value_entry->items);
 
     // Reserve space for all items
-    if (!udx_value_entry_item_array_reserve(&value_entry->items, key_entry->items.size)) {
+    if (!udx_db_value_entry_item_array_reserve(&value_entry->items, key_entry->items.size)) {
         udx_value_entry_free_contents(value_entry);
         free(value_entry);
         return NULL;
@@ -1080,7 +1080,7 @@ udx_db_iter *udx_db_iter_create(udx_db *db) {
     if (iter == NULL) return NULL;
 
     iter->db = db;
-    udx_value_entry_item_array_init(&iter->current_entry.items);
+    udx_db_value_entry_item_array_init(&iter->current_entry.items);
     iter->current_entry.key = NULL;
 
     // Read first leaf node
@@ -1122,7 +1122,7 @@ const udx_db_value_entry *udx_db_iter_next(udx_db_iter *iter) {
     // Free previous entry
     udx_value_entry_free_contents(&iter->current_entry);
     iter->current_entry.key = NULL;
-    udx_value_entry_item_array_init(&iter->current_entry.items);
+    udx_db_value_entry_item_array_init(&iter->current_entry.items);
 
     // Traverse until we find the next entry
     while (true) {

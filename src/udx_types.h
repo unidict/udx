@@ -88,20 +88,20 @@ typedef struct {
 // Item Arrays (used by Entry Types)
 // ============================================================
 
-// ---- udx_key_entry_item_array ----
+// ---- udx_db_key_entry_item_array ----
 typedef struct {
     udx_key_entry_item *data;
     size_t size;
     size_t capacity;
-} udx_key_entry_item_array;
+} udx_db_key_entry_item_array;
 
-static inline void udx_key_entry_item_array_init(udx_key_entry_item_array *arr) {
+static inline void udx_db_key_entry_item_array_init(udx_db_key_entry_item_array *arr) {
     arr->data = NULL;
     arr->size = 0;
     arr->capacity = 0;
 }
 
-static inline bool udx_key_entry_item_array_push(udx_key_entry_item_array *arr, udx_key_entry_item val) {
+static inline bool udx_db_key_entry_item_array_push(udx_db_key_entry_item_array *arr, udx_key_entry_item val) {
     if (arr == NULL) return false;
     if (arr->size >= arr->capacity) {
         size_t new_cap = arr->capacity == 0 ? 8 : arr->capacity * 2;
@@ -114,7 +114,7 @@ static inline bool udx_key_entry_item_array_push(udx_key_entry_item_array *arr, 
     return true;
 }
 
-static inline bool udx_key_entry_item_array_reserve(udx_key_entry_item_array *arr, size_t new_cap) {
+static inline bool udx_db_key_entry_item_array_reserve(udx_db_key_entry_item_array *arr, size_t new_cap) {
     if (arr == NULL) return false;
     if (new_cap <= arr->capacity) return true;
     udx_key_entry_item *new_data = (udx_key_entry_item *)realloc(arr->data, new_cap * sizeof(udx_key_entry_item));
@@ -124,7 +124,7 @@ static inline bool udx_key_entry_item_array_reserve(udx_key_entry_item_array *ar
     return true;
 }
 
-static inline void udx_key_entry_item_array_free(udx_key_entry_item_array *arr) {
+static inline void udx_db_key_entry_item_array_free(udx_db_key_entry_item_array *arr) {
     if (arr == NULL) return;
     free(arr->data);
     arr->data = NULL;
@@ -132,20 +132,20 @@ static inline void udx_key_entry_item_array_free(udx_key_entry_item_array *arr) 
     arr->capacity = 0;
 }
 
-// ---- udx_value_entry_item_array ----
+// ---- udx_db_value_entry_item_array ----
 typedef struct {
     udx_value_entry_item *data;
     size_t size;
     size_t capacity;
-} udx_value_entry_item_array;
+} udx_db_value_entry_item_array;
 
-static inline void udx_value_entry_item_array_init(udx_value_entry_item_array *arr) {
+static inline void udx_db_value_entry_item_array_init(udx_db_value_entry_item_array *arr) {
     arr->data = NULL;
     arr->size = 0;
     arr->capacity = 0;
 }
 
-static inline bool udx_value_entry_item_array_push(udx_value_entry_item_array *arr, udx_value_entry_item val) {
+static inline bool udx_db_value_entry_item_array_push(udx_db_value_entry_item_array *arr, udx_value_entry_item val) {
     if (arr == NULL) return false;
     if (arr->size >= arr->capacity) {
         size_t new_cap = arr->capacity == 0 ? 8 : arr->capacity * 2;
@@ -158,7 +158,7 @@ static inline bool udx_value_entry_item_array_push(udx_value_entry_item_array *a
     return true;
 }
 
-static inline bool udx_value_entry_item_array_reserve(udx_value_entry_item_array *arr, size_t new_cap) {
+static inline bool udx_db_value_entry_item_array_reserve(udx_db_value_entry_item_array *arr, size_t new_cap) {
     if (arr == NULL) return false;
     if (new_cap <= arr->capacity) return true;
     udx_value_entry_item *new_data = (udx_value_entry_item *)realloc(arr->data, new_cap * sizeof(udx_value_entry_item));
@@ -168,7 +168,7 @@ static inline bool udx_value_entry_item_array_reserve(udx_value_entry_item_array
     return true;
 }
 
-static inline void udx_value_entry_item_array_free(udx_value_entry_item_array *arr) {
+static inline void udx_db_value_entry_item_array_free(udx_db_value_entry_item_array *arr) {
     if (arr == NULL) return;
     free(arr->data);
     arr->data = NULL;
@@ -183,33 +183,33 @@ static inline void udx_value_entry_item_array_free(udx_value_entry_item_array *a
 // Key entry (folded key + items with addresses)
 typedef struct {
     char *key;                      // Key (folded for sorting and lookup)
-    udx_key_entry_item_array items; // Original keys and addresses
+    udx_db_key_entry_item_array items; // Original keys and addresses
 } udx_db_key_entry;
 
 // Data entry (folded key + items with data content)
 typedef struct {
     char *key;                     // Key (folded for sorting and lookup)
-    udx_value_entry_item_array items;  // Original keys and data
+    udx_db_value_entry_item_array items;  // Original keys and data
 } udx_db_value_entry;
 
 // ============================================================
 // Entry Arrays
 // ============================================================
 
-// ---- udx_key_entry_array ----
+// ---- udx_db_key_entry_array ----
 typedef struct {
     udx_db_key_entry *data;
     size_t size;
     size_t capacity;
-} udx_key_entry_array;
+} udx_db_key_entry_array;
 
-static inline void udx_key_entry_array_init(udx_key_entry_array *arr) {
+static inline void udx_db_key_entry_array_init(udx_db_key_entry_array *arr) {
     arr->data = NULL;
     arr->size = 0;
     arr->capacity = 0;
 }
 
-static inline void udx_key_entry_array_free(udx_key_entry_array *arr) {
+static inline void udx_db_key_entry_array_free(udx_db_key_entry_array *arr) {
     if (arr == NULL) return;
     free(arr->data);
     arr->data = NULL;
@@ -217,7 +217,7 @@ static inline void udx_key_entry_array_free(udx_key_entry_array *arr) {
     arr->capacity = 0;
 }
 
-static inline bool udx_key_entry_array_reserve(udx_key_entry_array *arr, size_t new_cap) {
+static inline bool udx_db_key_entry_array_reserve(udx_db_key_entry_array *arr, size_t new_cap) {
     if (arr == NULL) return false;
     if (new_cap <= arr->capacity) return true;
     udx_db_key_entry *new_data = (udx_db_key_entry *)realloc(arr->data, new_cap * sizeof(udx_db_key_entry));
@@ -227,7 +227,7 @@ static inline bool udx_key_entry_array_reserve(udx_key_entry_array *arr, size_t 
     return true;
 }
 
-static inline bool udx_key_entry_array_push(udx_key_entry_array *arr, udx_db_key_entry val) {
+static inline bool udx_db_key_entry_array_push(udx_db_key_entry_array *arr, udx_db_key_entry val) {
     if (arr == NULL) return false;
     if (arr->size >= arr->capacity) {
         size_t new_cap = arr->capacity == 0 ? 8 : arr->capacity * 2;
@@ -243,12 +243,12 @@ static inline bool udx_key_entry_array_push(udx_key_entry_array *arr, udx_db_key
 // Forward declaration (defined in udx_types.c)
 void udx_key_entry_free_contents(udx_db_key_entry *entry);
 
-static inline void udx_key_entry_array_free_contents(udx_key_entry_array *arr) {
+static inline void udx_db_key_entry_array_free_contents(udx_db_key_entry_array *arr) {
     if (arr == NULL) return;
     for (size_t i = 0; i < arr->size; i++) {
         udx_key_entry_free_contents(&arr->data[i]);
     }
-    udx_key_entry_array_free(arr);
+    udx_db_key_entry_array_free(arr);
 }
 
 // ============================================================

@@ -124,7 +124,7 @@ void test_reader_prefix_match(void) {
     TEST_ASSERT_NOT_NULL(db);
 
     // Prefix match should find both "hello" and "Hello"
-    udx_key_entry_array results = udx_db_index_prefix_match(db, "he", 10);
+    udx_db_key_entry_array results = udx_db_index_prefix_match(db, "he", 10);
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, results.size, "should find 1 entry (both hello/Hello map to same folded word)");
 
     // Verify the entry
@@ -139,7 +139,7 @@ void test_reader_prefix_match(void) {
     TEST_ASSERT_EQUAL_STRING_MESSAGE("Hello", results.data[0].items.data[1].original_key, "second original word should be 'Hello'");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(5, results.data[0].items.data[1].data_size, "second data should be 5 bytes");
 
-    udx_key_entry_array_free_contents(&results);
+    udx_db_key_entry_array_free_contents(&results);
     udx_db_close(db);
     udx_reader_close(reader);
     unlink("test_reader.udx");

@@ -391,7 +391,7 @@ Look up a single key in database (index only, no data loaded).
 #### `udx_db_key_entry_prefix_match()`
 
 ```c
-udx_key_entry_array udx_db_key_entry_prefix_match(udx_db *db, const char *prefix, size_t max_results);
+udx_db_key_entry_array udx_db_key_entry_prefix_match(udx_db *db, const char *prefix, size_t limit);
 ```
 
 Prefix match in database (index only, no data loaded).
@@ -399,10 +399,10 @@ Prefix match in database (index only, no data loaded).
 **Parameters:**
 - `db` - Database pointer
 - `prefix` - Prefix to match
-- `max_results` - Maximum number of results (0 = unlimited)
+- `limit` - Maximum number of results (0 = unlimited)
 
 **Return:**
-- Array of index entries (caller must free with `udx_key_entry_array_free_contents`)
+- Array of index entries (caller must free with `udx_db_key_entry_array_free_contents`)
 
 **Notes:**
 - This is useful for autocomplete/suggestion features
@@ -521,10 +521,10 @@ See `udx_types.h` for the complete definition of data types used in the API, inc
 
 - `udx_db_key_entry` - Index entry with addresses (no data)
 - `udx_db_value_entry` - Database entry with data loaded
-- `udx_key_entry_array` - Array of index entries
+- `udx_db_key_entry_array` - Array of index entries
 - `udx_value_address` - Address encoding (chunk index + offset)
 
 Memory management functions:
 - `udx_key_entry_free()` - Free an index entry
 - `udx_value_entry_free()` - Free a database entry
-- `udx_key_entry_array_free_contents()` - Free array contents
+- `udx_db_key_entry_array_free_contents()` - Free array contents

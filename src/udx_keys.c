@@ -112,7 +112,7 @@ bool udx_keys_add(udx_keys *keys,
         item.value_address = value_address;
         item.data_size = data_size;
 
-        if (!udx_key_entry_item_array_push(&existing->items, item)) {
+        if (!udx_db_key_entry_item_array_push(&existing->items, item)) {
             free(item.original_key);
             free(folded);
             return false;
@@ -123,7 +123,7 @@ bool udx_keys_add(udx_keys *keys,
         // btree_set will memcpy (shallow copy) the struct into internal storage
         udx_db_key_entry new_entry;
         new_entry.key = folded;  // ownership transferred to btree on success
-        udx_key_entry_item_array_init(&new_entry.items);
+        udx_db_key_entry_item_array_init(&new_entry.items);
 
         // Create first item with original key
         udx_key_entry_item item;
@@ -134,7 +134,7 @@ bool udx_keys_add(udx_keys *keys,
         }
         item.value_address = value_address;
         item.data_size = data_size;
-        if (!udx_key_entry_item_array_push(&new_entry.items, item)) {
+        if (!udx_db_key_entry_item_array_push(&new_entry.items, item)) {
             free(item.original_key);
             free(folded);
             return false;

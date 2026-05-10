@@ -108,13 +108,13 @@ udx_db_key_entry *udx_db_key_entry_lookup(udx_db *db, const char *key);
  * Prefix match in db (index only, no data loaded)
  * @param db Db pointer
  * @param prefix Prefix to match
- * @param max_results Maximum number of results (0 = unlimited)
- * @return Array of index entries (caller must free with udx_key_entry_array_free_contents)
+ * @param limit Maximum number of results (0 = unlimited)
+ * @return Array of index entries (caller must free with udx_db_key_entry_array_free_contents)
  *
  * @note This is useful for autocomplete/suggestion features
  * @note Returns entries with addresses only, use udx_db_lookup_by_key_entry() to load data
  */
-udx_key_entry_array udx_db_key_entry_prefix_match(udx_db *db, const char *prefix, size_t max_results);
+udx_db_key_entry_array udx_db_key_entry_prefix_match(udx_db *db, const char *prefix, size_t limit);
 
 // ============================================================
 // Full Data Lookup (returns entries with data loaded)
