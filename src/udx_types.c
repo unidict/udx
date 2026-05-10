@@ -8,7 +8,7 @@
 #include "udx_types.h"
 #include <stdlib.h>
 
-void udx_key_entry_free_contents(udx_db_key_entry *entry) {
+void udx_db_key_entry_free_contents(udx_db_key_entry *entry) {
     if (entry == NULL) return;
     free(entry->key);
     entry->key = NULL;
@@ -20,13 +20,13 @@ void udx_key_entry_free_contents(udx_db_key_entry *entry) {
     udx_db_key_entry_item_array_free(&entry->items);
 }
 
-void udx_key_entry_free(udx_db_key_entry *entry) {
+void udx_db_key_entry_free(udx_db_key_entry *entry) {
     if (entry == NULL) return;
-    udx_key_entry_free_contents(entry);
+    udx_db_key_entry_free_contents(entry);
     free(entry);
 }
 
-void udx_value_entry_free_contents(udx_db_value_entry *entry) {
+void udx_db_value_entry_free_contents(udx_db_value_entry *entry) {
     if (entry == NULL) return;
     free(entry->key);
     entry->key = NULL;
@@ -39,8 +39,8 @@ void udx_value_entry_free_contents(udx_db_value_entry *entry) {
     udx_db_value_entry_item_array_free(&entry->items);
 }
 
-void udx_value_entry_free(udx_db_value_entry *entry) {
+void udx_db_value_entry_free(udx_db_value_entry *entry) {
     if (entry == NULL) return;
-    udx_value_entry_free_contents(entry);
+    udx_db_value_entry_free_contents(entry);
     free(entry);
 }

@@ -40,7 +40,7 @@ static int entry_compare(const void *a, const void *b, void *udata) {
 static void entry_free_callback(const void *item, void *udata) {
     (void)udata;
     udx_db_key_entry *entry = (udx_db_key_entry *)item;
-    udx_key_entry_free_contents(entry);
+    udx_db_key_entry_free_contents(entry);
 }
 
 // ============================================================
@@ -145,7 +145,7 @@ bool udx_keys_add(udx_keys *keys,
 
         if (udx_btree_oom(keys->tree)) {
             // btree did not take ownership, clean up everything
-            udx_key_entry_free_contents(&new_entry);
+            udx_db_key_entry_free_contents(&new_entry);
             return false;
         }
         // Success: btree now owns the pointers (key, items.data)

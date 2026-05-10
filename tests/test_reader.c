@@ -108,7 +108,7 @@ void test_reader_lookup(void) {
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(5, entry->items.data[1].size, "second data should be 5 bytes");
     TEST_ASSERT_EQUAL_STRING_LEN_MESSAGE("WORLD", (char*)entry->items.data[1].data, 5, "second data should be 'WORLD'");
 
-    udx_value_entry_free(entry);
+    udx_db_value_entry_free(entry);
     udx_db_close(db);
     udx_reader_close(reader);
     unlink("test_reader.udx");
@@ -124,22 +124,23 @@ void test_reader_prefix_match(void) {
     TEST_ASSERT_NOT_NULL(db);
 
     // Prefix match should find both "hello" and "Hello"
-    udx_db_key_entry_array results = udx_db_index_prefix_match(db, "he", 10);
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, results.size, "should find 1 entry (both hello/Hello map to same folded word)");
+    udx_db_key_entry_array *results = udx_db_key_entry_prefix_match(db, "he", 10);
+    TEST_ASSERT_NOT_NULL_MESSAGE(results, "prefix match should return results");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, results->size, "should find 1 entry (both hello/Hello map to same folded word)");
 
     // Verify the entry
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("hello", results.data[0].key, "folded word should be 'hello'");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(2, results.data[0].items.size, "should have 2 items");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("hello", results->data[0].key, "folded word should be 'hello'");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(2, results->data[0].items.size, "should have 2 items");
 
     // Verify first item
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("hello", results.data[0].items.data[0].original_key, "first original word should be 'hello'");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(5, results.data[0].items.data[0].data_size, "first data should be 5 bytes");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("hello", results->data[0].items.data[0].original_key, "first original word should be 'hello'");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(5, results->data[0].items.data[0].data_size, "first data should be 5 bytes");
 
     // Verify second item
-    TEST_ASSERT_EQUAL_STRING_MESSAGE("Hello", results.data[0].items.data[1].original_key, "second original word should be 'Hello'");
-    TEST_ASSERT_EQUAL_UINT32_MESSAGE(5, results.data[0].items.data[1].data_size, "second data should be 5 bytes");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("Hello", results->data[0].items.data[1].original_key, "second original word should be 'Hello'");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(5, results->data[0].items.data[1].data_size, "second data should be 5 bytes");
 
-    udx_db_key_entry_array_free_contents(&results);
+    udx_db_key_entry_array_free(results);
     udx_db_close(db);
     udx_reader_close(reader);
     unlink("test_reader.udx");
@@ -215,9 +216,9 @@ void test_reader_case_insensitive(void) {
     TEST_ASSERT_EQUAL_STRING_LEN_MESSAGE("WORLD", (char*)e2->items.data[1].data, 5, "second item data should be 'WORLD'");
     TEST_ASSERT_EQUAL_STRING_LEN_MESSAGE("WORLD", (char*)e3->items.data[1].data, 5, "second item data should be 'WORLD'");
 
-    udx_value_entry_free(e1);
-    udx_value_entry_free(e2);
-    udx_value_entry_free(e3);
+    udx_db_value_entry_free(e1);
+    udx_db_value_entry_free(e2);
+    udx_db_value_entry_free(e3);
     udx_db_close(db);
     udx_reader_close(reader);
     unlink("test_reader.udx");

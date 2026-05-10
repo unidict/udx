@@ -193,6 +193,20 @@ typedef struct {
 } udx_db_value_entry;
 
 // ============================================================
+// Entry Operations
+// ============================================================
+
+// Free entry's internal fields without freeing the entry struct itself.
+// Use when the entry is stack-allocated or embedded in another struct.
+void udx_db_key_entry_free_contents(udx_db_key_entry *entry);
+void udx_db_value_entry_free_contents(udx_db_value_entry *entry);
+
+// Free entry's internal fields AND the entry struct itself (calls free_contents + free).
+// Use when the entry was heap-allocated (returned by lookup functions).
+void udx_db_key_entry_free(udx_db_key_entry *entry);
+void udx_db_value_entry_free(udx_db_value_entry *entry);
+
+// ============================================================
 // Entry Arrays
 // ============================================================
 
@@ -211,10 +225,11 @@ static inline void udx_db_key_entry_array_init(udx_db_key_entry_array *arr) {
 
 static inline void udx_db_key_entry_array_free(udx_db_key_entry_array *arr) {
     if (arr == NULL) return;
+    for (size_t i = 0; i < arr->size; i++) {
+        udx_db_key_entry_free_contents(&arr->data[i]);
+    }
     free(arr->data);
-    arr->data = NULL;
-    arr->size = 0;
-    arr->capacity = 0;
+    free(arr);
 }
 
 static inline bool udx_db_key_entry_array_reserve(udx_db_key_entry_array *arr, size_t new_cap) {
@@ -239,25 +254,6 @@ static inline bool udx_db_key_entry_array_push(udx_db_key_entry_array *arr, udx_
     arr->data[arr->size++] = val;
     return true;
 }
-
-// Forward declaration (defined in udx_types.c)
-void udx_key_entry_free_contents(udx_db_key_entry *entry);
-
-static inline void udx_db_key_entry_array_free_contents(udx_db_key_entry_array *arr) {
-    if (arr == NULL) return;
-    for (size_t i = 0; i < arr->size; i++) {
-        udx_key_entry_free_contents(&arr->data[i]);
-    }
-    udx_db_key_entry_array_free(arr);
-}
-
-// ============================================================
-// Entry Operations
-// ============================================================
-
-void udx_key_entry_free(udx_db_key_entry *entry);
-void udx_value_entry_free_contents(udx_db_value_entry *entry);
-void udx_value_entry_free(udx_db_value_entry *entry);
 
 // ============================================================
 // Other Dynamic Arrays
