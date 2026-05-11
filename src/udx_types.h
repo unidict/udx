@@ -51,7 +51,7 @@ typedef enum {
     UDX_ERR_METADATA            = -9,   // Invalid metadata parameters
     UDX_ERR_OVERFLOW            = -10,  // Integer/size overflow
     UDX_ERR_MEMORY              = -11   // Memory allocation failed
-} udx_error_t;
+} udx_status_t;
 
 // ============================================================
 // Basic Types
@@ -74,7 +74,7 @@ typedef uint64_t udx_value_address;
 typedef struct {
     char *original_key;       // Original key (preserves case)
     udx_value_address value_address; // Value address
-    uint32_t data_size;        // Data size in bytes
+    uint32_t value_size;        // Value size in bytes
 } udx_key_entry_item;
 
 // Data entry item (one original_key + data pair)
@@ -211,13 +211,13 @@ void udx_db_value_entry_free(udx_db_value_entry *entry);
 
 // ---- udx_db_key_entry_array ----
 typedef struct {
-    udx_db_key_entry *data;
+    udx_db_key_entry *entries;
     size_t size;
     size_t capacity;
 } udx_db_key_entry_array;
 
 static inline void udx_db_key_entry_array_init(udx_db_key_entry_array *arr) {
-    arr->data = NULL;
+    arr->entries = NULL;
     arr->size = 0;
     arr->capacity = 0;
 }
@@ -225,18 +225,18 @@ static inline void udx_db_key_entry_array_init(udx_db_key_entry_array *arr) {
 static inline void udx_db_key_entry_array_free(udx_db_key_entry_array *arr) {
     if (arr == NULL) return;
     for (size_t i = 0; i < arr->size; i++) {
-        udx_db_key_entry_free_contents(&arr->data[i]);
+        udx_db_key_entry_free_contents(&arr->entries[i]);
     }
-    free(arr->data);
+    free(arr->entries);
     free(arr);
 }
 
 static inline bool udx_db_key_entry_array_reserve(udx_db_key_entry_array *arr, size_t new_cap) {
     if (arr == NULL) return false;
     if (new_cap <= arr->capacity) return true;
-    udx_db_key_entry *new_data = (udx_db_key_entry *)realloc(arr->data, new_cap * sizeof(udx_db_key_entry));
+    udx_db_key_entry *new_data = (udx_db_key_entry *)realloc(arr->entries, new_cap * sizeof(udx_db_key_entry));
     if (new_data == NULL) return false;
-    arr->data = new_data;
+    arr->entries = new_data;
     arr->capacity = new_cap;
     return true;
 }
@@ -245,12 +245,12 @@ static inline bool udx_db_key_entry_array_push(udx_db_key_entry_array *arr, udx_
     if (arr == NULL) return false;
     if (arr->size >= arr->capacity) {
         size_t new_cap = arr->capacity == 0 ? 8 : arr->capacity * 2;
-        udx_db_key_entry *new_data = (udx_db_key_entry *)realloc(arr->data, new_cap * sizeof(udx_db_key_entry));
+        udx_db_key_entry *new_data = (udx_db_key_entry *)realloc(arr->entries, new_cap * sizeof(udx_db_key_entry));
         if (new_data == NULL) return false;
-        arr->data = new_data;
+        arr->entries = new_data;
         arr->capacity = new_cap;
     }
-    arr->data[arr->size++] = val;
+    arr->entries[arr->size++] = val;
     return true;
 }
 
@@ -364,8 +364,8 @@ typedef struct {
     uint64_t chunk_table_offset;      // Chunk table offset
     uint64_t index_root_offset;       // B+ tree root node offset
     uint64_t index_first_leaf_offset; // B+ tree first leaf node offset
-    uint32_t index_entry_count;       // Total number of entries (unique keys)
-    uint32_t index_item_count;        // Total number of addresses (all keys)
+    uint32_t entry_count;             // Total number of entries (unique keys)
+    uint32_t item_count;              // Total number of addresses (all keys)
     uint32_t index_bptree_height;     // B+ tree height
     uint32_t metadata_size;           // Metadata size (0 = no metadata)
     uint32_t checksum;                // CRC32 checksum of header (excluding this field)
@@ -407,8 +407,8 @@ static inline void udx_db_header_serialize(const udx_db_header *h, uint8_t buf[U
     memcpy(p, &h->chunk_table_offset,     8); p += 8;
     memcpy(p, &h->index_root_offset,      8); p += 8;
     memcpy(p, &h->index_first_leaf_offset,8); p += 8;
-    memcpy(p, &h->index_entry_count,      4); p += 4;
-    memcpy(p, &h->index_item_count,       4); p += 4;
+    memcpy(p, &h->entry_count,      4); p += 4;
+    memcpy(p, &h->item_count,       4); p += 4;
     memcpy(p, &h->index_bptree_height,    4); p += 4;
     memcpy(p, &h->metadata_size,          4); p += 4;
     memcpy(p, &h->checksum,              4); p += 4;
@@ -419,8 +419,8 @@ static inline void udx_db_header_deserialize(const uint8_t buf[UDX_DB_HEADER_SER
     memcpy(&h->chunk_table_offset,     p, 8); p += 8;
     memcpy(&h->index_root_offset,      p, 8); p += 8;
     memcpy(&h->index_first_leaf_offset,p, 8); p += 8;
-    memcpy(&h->index_entry_count,      p, 4); p += 4;
-    memcpy(&h->index_item_count,       p, 4); p += 4;
+    memcpy(&h->entry_count,      p, 4); p += 4;
+    memcpy(&h->item_count,       p, 4); p += 4;
     memcpy(&h->index_bptree_height,    p, 4); p += 4;
     memcpy(&h->metadata_size,          p, 4); p += 4;
     memcpy(&h->checksum,              p, 4); p += 4;

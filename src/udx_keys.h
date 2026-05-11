@@ -55,7 +55,7 @@ void udx_keys_destroy(udx_keys *keys);
 bool udx_keys_add(udx_keys *keys,
                           const char *key,
                           udx_value_address value_address,
-                          uint32_t data_size);
+                          uint32_t value_size);
 
 /**
  * Get the number of unique keys

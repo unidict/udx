@@ -156,7 +156,7 @@ static size_t serialize_index_entry_into(const udx_db_key_entry *entry,
         ptr += original_len;
         memcpy(ptr, &item->value_address, sizeof(udx_value_address));
         ptr += sizeof(udx_value_address);
-        memcpy(ptr, &item->data_size, sizeof(uint32_t));
+        memcpy(ptr, &item->value_size, sizeof(uint32_t));
         ptr += sizeof(uint32_t);
     }
 
@@ -406,10 +406,10 @@ udx_writer *udx_writer_open(const char *output_path) {
     return writer;
 }
 
-udx_error_t udx_writer_close(udx_writer *writer) {
+udx_status_t udx_writer_close(udx_writer *writer) {
     if (writer == NULL) return UDX_OK;
 
-    udx_error_t result = UDX_OK;
+    udx_status_t result = UDX_OK;
 
     // Caller must finish all builders before closing
     if (writer->has_db_active) {
@@ -585,13 +585,13 @@ error:
     return NULL;
 }
 
-udx_error_t udx_db_builder_finalize(udx_db_builder *builder) {
+udx_status_t udx_db_builder_finalize(udx_db_builder *builder) {
     if (builder == NULL) {
         return UDX_ERR_INVALID_PARAM;
     }
 
     udx_writer *writer = builder->writer;
-    udx_error_t result = UDX_OK;
+    udx_status_t result = UDX_OK;
 
     // Validate key count
     size_t key_count = udx_keys_count(builder->keys);
@@ -629,8 +629,8 @@ udx_error_t udx_db_builder_finalize(udx_db_builder *builder) {
     header.chunk_table_offset = chunks_offset;
     header.index_root_offset = builder->index_root_offset;
     header.index_first_leaf_offset = builder->index_first_leaf_offset;
-    header.index_entry_count = (uint32_t)key_count;
-    header.index_item_count = (uint32_t)item_count;
+    header.entry_count = (uint32_t)key_count;
+    header.item_count = (uint32_t)item_count;
     header.index_bptree_height = builder->index_bptree_height;
 
     // Calculate checksum on wire bytes (exclude the checksum field itself)
@@ -684,7 +684,7 @@ cleanup:
     return result;
 }
 
-udx_error_t udx_db_builder_add_entry(udx_db_builder *builder,
+udx_status_t udx_db_builder_add_entry(udx_db_builder *builder,
                            const char *key,
                            const uint8_t *value,
                            uint32_t value_size) {
@@ -708,7 +708,7 @@ udx_value_address udx_db_builder_add_value(udx_db_builder *builder,
     return udx_chunk_writer_add_block(builder->chunk_writer, value, value_size);
 }
 
-udx_error_t udx_db_builder_add_key_entry(udx_db_builder *builder,
+udx_status_t udx_db_builder_add_key_entry(udx_db_builder *builder,
                                           const char *key,
                                           udx_value_address value_address,
                                           uint32_t value_size) {

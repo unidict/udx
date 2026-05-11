@@ -356,7 +356,7 @@ static size_t parse_entry(const uint8_t *data, size_t available, udx_db_key_entr
             udx_key_entry_item item;
             item.original_key = original_copy;
             item.value_address = address;
-            item.data_size = data_size;
+            item.value_size = data_size;
             udx_db_key_entry_item_array_push(&entry->items, item);
         }
     }
@@ -601,7 +601,7 @@ void udx_db_close(udx_db *db) {
 udx_db_key_entry *udx_db_key_entry_lookup(udx_db *db, const char *key) {
     if (db == NULL || key == NULL) return NULL;
 
-    if (db->header.index_entry_count == 0 || db->root_node == NULL) return NULL;
+    if (db->header.entry_count == 0 || db->root_node == NULL) return NULL;
 
     char *folded_key = udx_fold_string(key);
     if (folded_key == NULL) return NULL;
@@ -641,7 +641,7 @@ udx_db_key_entry_array *udx_db_key_entry_prefix_match(udx_db *db, const char *pr
                                                          size_t limit) {
     if (db == NULL || prefix == NULL) return NULL;
 
-    if (db->header.index_entry_count == 0 || db->root_node == NULL) return NULL;
+    if (db->header.entry_count == 0 || db->root_node == NULL) return NULL;
 
     char *key = udx_fold_string(prefix);
     if (key == NULL) return NULL;
@@ -780,7 +780,7 @@ static uint8_t *udx_db_get_data(udx_db *db, udx_value_address address, uint32_t 
  * Convert udx_db_key_entry to udx_db_value_entry
  * Loads all items for the key
  */
-udx_db_value_entry *udx_db_lookup_by_key_entry(udx_db *db, const udx_db_key_entry *key_entry) {
+udx_db_value_entry *udx_db_value_entry_load(udx_db *db, const udx_db_key_entry *key_entry) {
     if (key_entry == NULL || key_entry->items.size == 0) {
         return NULL;
     }
@@ -815,8 +815,8 @@ udx_db_value_entry *udx_db_lookup_by_key_entry(udx_db *db, const udx_db_key_entr
             return NULL;
         }
 
-        item.data = udx_db_get_data(db, src->value_address, src->data_size);
-        item.size = src->data_size;
+        item.data = udx_db_get_data(db, src->value_address, src->value_size);
+        item.size = src->value_size;
 
         if (item.data == NULL) {
             free(item.original_key);
@@ -832,7 +832,7 @@ udx_db_value_entry *udx_db_lookup_by_key_entry(udx_db *db, const udx_db_key_entr
     return value_entry;
 }
 
-udx_db_value_entry *udx_db_lookup(udx_db *db, const char *key) {
+udx_db_value_entry *udx_db_value_entry_lookup(udx_db *db, const char *key) {
     if (db == NULL || key == NULL) {
         return NULL;
     }
@@ -844,7 +844,7 @@ udx_db_value_entry *udx_db_lookup(udx_db *db, const char *key) {
     }
 
     // Convert to data entry
-    udx_db_value_entry *value_entry = udx_db_lookup_by_key_entry(db, key_entry);
+    udx_db_value_entry *value_entry = udx_db_value_entry_load(db, key_entry);
 
     // Free key_entry
     udx_db_key_entry_free(key_entry);
@@ -888,11 +888,11 @@ const uint8_t *udx_db_get_metadata(const udx_db *db, uint32_t *out_size) {
 }
 
 uint32_t udx_db_get_key_count(const udx_db *db) {
-    return db ? db->header.index_entry_count : 0;
+    return db ? db->header.entry_count : 0;
 }
 
 uint32_t udx_db_get_item_count(const udx_db *db) {
-    return db ? db->header.index_item_count : 0;
+    return db ? db->header.item_count : 0;
 }
 
 uint32_t udx_db_get_index_bptree_height(const udx_db *db) {
@@ -1062,7 +1062,7 @@ struct udx_db_iter {
 };
 
 udx_db_iter *udx_db_iter_create(udx_db *db) {
-    if (db == NULL || db->header.index_entry_count == 0) return NULL;
+    if (db == NULL || db->header.entry_count == 0) return NULL;
 
     udx_db_iter *iter = (udx_db_iter *)calloc(1, sizeof(udx_db_iter));
     if (iter == NULL) return NULL;

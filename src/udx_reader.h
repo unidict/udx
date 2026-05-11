@@ -96,13 +96,13 @@ udx_db_key_entry_array *udx_db_key_entry_prefix_match(udx_db *db, const char *pr
  * Look up a value entry by key (case-insensitive)
  * @return Value entry (caller must free with udx_db_value_entry_free), or NULL if not found
  */
-udx_db_value_entry *udx_db_lookup(udx_db *db, const char *key);
+udx_db_value_entry *udx_db_value_entry_lookup(udx_db *db, const char *key);
 
 /**
  * Convert a key entry to a value entry by loading data for all items
  * @return Value entry (caller must free with udx_db_value_entry_free), or NULL on error
  */
-udx_db_value_entry *udx_db_lookup_by_key_entry(udx_db *db, const udx_db_key_entry *key_entry);
+udx_db_value_entry *udx_db_value_entry_load(udx_db *db, const udx_db_key_entry *key_entry);
 
 // ============================================================
 // Iterator

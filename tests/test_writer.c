@@ -43,7 +43,7 @@ void test_writer_create_db(void) {
     // Add at least one entry (databases must have entries to be valid)
     udx_db_builder_add_entry(builder, "test", (const uint8_t*)"data", 4);
 
-    udx_error_t result = udx_db_builder_finalize(builder);
+    udx_status_t result = udx_db_builder_finalize(builder);
     TEST_ASSERT_EQUAL_INT_MESSAGE(UDX_OK, result, "finalize should succeed");
 
     udx_writer_close(writer);
@@ -60,7 +60,7 @@ void test_writer_add_entry(void) {
     udx_db_builder* builder = udx_db_builder_create(writer, "test_db");
     TEST_ASSERT_NOT_NULL(builder);
 
-    udx_error_t result = udx_db_builder_add_entry(builder, "hello",
+    udx_status_t result = udx_db_builder_add_entry(builder, "hello",
         (const uint8_t*)"world", 5);
     TEST_ASSERT_EQUAL_INT_MESSAGE(UDX_OK, result, "add_entry should succeed");
 
@@ -106,7 +106,7 @@ void test_writer_empty_database(void) {
     udx_db_builder* builder = udx_db_builder_create(writer, "empty_db");
     TEST_ASSERT_NOT_NULL(builder);
 
-    udx_error_t result = udx_db_builder_finalize(builder);
+    udx_status_t result = udx_db_builder_finalize(builder);
     TEST_ASSERT_EQUAL_INT_MESSAGE(UDX_ERR_INVALID_PARAM, result,
         "empty database should fail with UDX_ERR_INVALID_PARAM");
 
@@ -151,7 +151,7 @@ void test_writer_with_metadata(void) {
     // Add at least one entry (databases must have entries to be valid)
     udx_db_builder_add_entry(builder, "test", (const uint8_t*)"data", 4);
 
-    udx_error_t result = udx_db_builder_finalize(builder);
+    udx_status_t result = udx_db_builder_finalize(builder);
     TEST_ASSERT_EQUAL_INT(UDX_OK, result);
 
     udx_writer_close(writer);
@@ -172,7 +172,7 @@ void test_writer_close_with_active_builder(void) {
     // Try to close with active builder (should fail)
     // Note: The library will close the file and free the writer even when returning error
     // Resources will leak in this error case, but that's a library design issue
-    udx_error_t result = udx_writer_close(writer);
+    udx_status_t result = udx_writer_close(writer);
     TEST_ASSERT_EQUAL_INT_MESSAGE(UDX_ERR_ACTIVE_DB, result,
         "close with active builder should fail");
 

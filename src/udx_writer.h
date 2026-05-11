@@ -43,7 +43,7 @@ udx_writer *udx_writer_open(const char *output_path);
  *
  * @note All builders must be finished before closing
  */
-udx_error_t udx_writer_close(udx_writer *writer);
+udx_status_t udx_writer_close(udx_writer *writer);
 
 // ============================================================
 // Database Builder API
@@ -91,7 +91,7 @@ udx_db_builder *udx_db_builder_create_with_metadata(udx_writer *writer,
  * @note After this call, the builder is freed and must not be used again
  * @note Empty databases (with no entries) are not allowed and will return UDX_ERR_INVALID_PARAM
  */
-udx_error_t udx_db_builder_finalize(udx_db_builder *builder);
+udx_status_t udx_db_builder_finalize(udx_db_builder *builder);
 
 /**
  * Add an entry to the database
@@ -126,7 +126,7 @@ udx_error_t udx_db_builder_finalize(udx_db_builder *builder);
  *   udx_db_builder_add_entry(builder, "banana", data2, size2); // Another simple entry
  * @endcode
  */
-udx_error_t udx_db_builder_add_entry(udx_db_builder *builder,
+udx_status_t udx_db_builder_add_entry(udx_db_builder *builder,
                            const char *key,
                            const uint8_t *value,
                            uint32_t value_size);
@@ -215,7 +215,7 @@ udx_value_address udx_db_builder_add_value(udx_db_builder *builder,
  *   }
  * @endcode
  */
-udx_error_t udx_db_builder_add_key_entry(udx_db_builder *builder,
+udx_status_t udx_db_builder_add_key_entry(udx_db_builder *builder,
                                           const char *key,
                                           udx_value_address value_address,
                                           uint32_t value_size);
