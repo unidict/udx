@@ -68,7 +68,6 @@ const char *udx_db_get_name(const udx_db *db);
 const uint8_t *udx_db_get_metadata(const udx_db *db, uint32_t *out_size);
 uint32_t udx_db_get_key_count(const udx_db *db);
 uint32_t udx_db_get_item_count(const udx_db *db);
-uint32_t udx_db_get_index_bptree_height(const udx_db *db);
 
 // ============================================================
 // Key Entry Lookup

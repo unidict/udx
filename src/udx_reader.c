@@ -895,9 +895,6 @@ uint32_t udx_db_get_item_count(const udx_db *db) {
     return db ? db->header.item_count : 0;
 }
 
-uint32_t udx_db_get_index_bptree_height(const udx_db *db) {
-    return db ? db->header.index_bptree_height : 0;
-}
 
 /**
  * Open UDX file and read main header and db table
