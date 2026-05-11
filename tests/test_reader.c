@@ -92,7 +92,9 @@ void test_reader_lookup(void) {
     TEST_ASSERT_NOT_NULL(db);
 
     // Case-insensitive lookup: "hello" should match both "hello" and "Hello"
-    udx_db_value_entry* entry = udx_db_value_entry_lookup(db, "hello");
+    udx_db_value_entry* entry = NULL;
+    udx_status_t status = udx_db_value_entry_lookup(db, "hello", &entry);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(UDX_OK, status, "lookup should succeed");
     TEST_ASSERT_NOT_NULL_MESSAGE(entry, "entry should be found");
 
     // Should have 2 items (one for "hello"->"world", one for "Hello"->"WORLD")
@@ -124,7 +126,9 @@ void test_reader_prefix_match(void) {
     TEST_ASSERT_NOT_NULL(db);
 
     // Prefix match should find both "hello" and "Hello"
-    udx_db_key_entry_array *results = udx_db_key_entry_prefix_match(db, "he", 10);
+    udx_db_key_entry_array *results = NULL;
+    udx_status_t status = udx_db_key_entry_prefix_match(db, "he", 10, &results);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(UDX_OK, status, "prefix match should succeed");
     TEST_ASSERT_NOT_NULL_MESSAGE(results, "prefix match should return results");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, results->size, "should find 1 entry (both hello/Hello map to same folded word)");
 
@@ -160,22 +164,25 @@ void test_reader_iterator(void) {
 
     // Should iterate through all 2 unique key entries: "hello" (with 2 items) and "test" (with 1 item)
     const udx_db_key_entry* entry;
+    udx_status_t status;
 
     // First entry: "hello" with 2 items
-    entry = udx_db_iter_next(iter);
+    status = udx_db_iter_next(iter, &entry);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(UDX_OK, status, "first iter_next should succeed");
     TEST_ASSERT_NOT_NULL_MESSAGE(entry, "should have first entry");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("hello", entry->key, "first word should be 'hello'");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(2, entry->items.size, "hello should have 2 items");
 
     // Second entry: "test" with 1 item
-    entry = udx_db_iter_next(iter);
+    status = udx_db_iter_next(iter, &entry);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(UDX_OK, status, "second iter_next should succeed");
     TEST_ASSERT_NOT_NULL_MESSAGE(entry, "should have second entry");
     TEST_ASSERT_EQUAL_STRING_MESSAGE("test", entry->key, "second word should be 'test'");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, entry->items.size, "test should have 1 item");
 
     // No more entries
-    entry = udx_db_iter_next(iter);
-    TEST_ASSERT_NULL_MESSAGE(entry, "should have no more entries");
+    status = udx_db_iter_next(iter, &entry);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(UDX_NOT_FOUND, status, "should have no more entries");
 
     udx_db_iter_destroy(iter);
     udx_db_close(db);
@@ -193,10 +200,16 @@ void test_reader_case_insensitive(void) {
     TEST_ASSERT_NOT_NULL(db);
 
     // All case variations should return the same results (both "hello" and "Hello" items)
-    udx_db_value_entry* e1 = udx_db_value_entry_lookup(db, "hello");
-    udx_db_value_entry* e2 = udx_db_value_entry_lookup(db, "HELLO");
-    udx_db_value_entry* e3 = udx_db_value_entry_lookup(db, "HeLLo");
+    udx_db_value_entry* e1 = NULL;
+    udx_db_value_entry* e2 = NULL;
+    udx_db_value_entry* e3 = NULL;
+    udx_status_t s1 = udx_db_value_entry_lookup(db, "hello", &e1);
+    udx_status_t s2 = udx_db_value_entry_lookup(db, "HELLO", &e2);
+    udx_status_t s3 = udx_db_value_entry_lookup(db, "HeLLo", &e3);
 
+    TEST_ASSERT_EQUAL_INT(UDX_OK, s1);
+    TEST_ASSERT_EQUAL_INT(UDX_OK, s2);
+    TEST_ASSERT_EQUAL_INT(UDX_OK, s3);
     TEST_ASSERT_NOT_NULL(e1);
     TEST_ASSERT_NOT_NULL(e2);
     TEST_ASSERT_NOT_NULL(e3);

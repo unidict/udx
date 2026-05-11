@@ -40,6 +40,7 @@ extern "C" {
 
 typedef enum {
     UDX_OK                      = 0,    // Success
+    UDX_NOT_FOUND               = 1,    // Key not found
     UDX_ERR_INVALID_PARAM       = -1,   // Invalid parameter (NULL pointer, etc.)
     UDX_ERR_IO                  = -2,   // File I/O error
     UDX_ERR_BPTREE              = -3,   // B+ tree operation failed
@@ -58,7 +59,7 @@ typedef enum {
 // ============================================================
 
 // Value address: 48-bit chunk_index + 16-bit offset in chunk (chunk_index limited to 32 bits)
-typedef uint64_t udx_value_address;
+typedef uint64_t udx_value_address_t;
 
 // Invalid address sentinel (used to indicate errors)
 #define UDX_INVALID_ADDRESS      UINT64_MAX
@@ -73,7 +74,7 @@ typedef uint64_t udx_value_address;
 // Key entry item (one original_key + address + data_size)
 typedef struct {
     char *original_key;       // Original key (preserves case)
-    udx_value_address value_address; // Value address
+    udx_value_address_t value_address; // Value address
     uint32_t value_size;        // Value size in bytes
 } udx_key_entry_item;
 
@@ -180,6 +181,13 @@ static inline void udx_db_value_entry_item_array_free(udx_db_value_entry_item_ar
 // Entry Types
 // ============================================================
 
+/**
+ * A key entry in the UDX index.
+ *
+ * Each entry corresponds to one folded key, and may contain multiple
+ * items if several original keys fold to the same form (e.g. "Apple"
+ * and "apple" share one entry with two items).
+ */
 // Key entry (folded key + items with addresses)
 typedef struct {
     char *key;                      // Key (folded for sorting and lookup)
@@ -333,10 +341,10 @@ static inline void udx_string_array_free(udx_string_array *arr) {
 typedef enum {
     UDX_INDEX_NODE_TYPE_INTERNAL = 0x01,
     UDX_INDEX_NODE_TYPE_LEAF     = 0x02
-} udx_index_node_type;
+} udx_index_node_type_t;
 
 typedef struct {
-    udx_index_node_type type;         // Node type (INTERNAL or LEAF)
+    udx_index_node_type_t type;         // Node type (INTERNAL or LEAF)
     uint8_t *data;                   // Decompressed node data
     size_t size;                     // Data size
 } udx_index_node;

@@ -80,7 +80,7 @@ void udx_keys_destroy(udx_keys *keys) {
 
 bool udx_keys_add(udx_keys *keys,
                           const char *key,
-                          udx_value_address value_address,
+                          udx_value_address_t value_address,
                           uint32_t value_size) {
     if (keys == NULL || key == NULL) {
         return false;

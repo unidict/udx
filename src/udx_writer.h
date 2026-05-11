@@ -156,7 +156,7 @@ udx_status_t udx_db_builder_add_entry(udx_db_builder *builder,
  * Example (adding key with alternates):
  * @code
  *   // Store definition data once
- *   udx_value_address addr = udx_db_builder_add_value(builder, def_data, def_size);
+ *   udx_value_address_t addr = udx_db_builder_add_value(builder, def_data, def_size);
  *
  *   // Add main key
  *   udx_db_builder_add_key_entry(builder, "colour", addr, def_size);
@@ -165,7 +165,7 @@ udx_status_t udx_db_builder_add_entry(udx_db_builder *builder,
  *   udx_db_builder_add_key_entry(builder, "color", addr, def_size);
  * @endcode
  */
-udx_value_address udx_db_builder_add_value(udx_db_builder *builder,
+udx_value_address_t udx_db_builder_add_value(udx_db_builder *builder,
                                                   const uint8_t *value,
                                                   uint32_t value_size);
 
@@ -202,7 +202,7 @@ udx_value_address udx_db_builder_add_value(udx_db_builder *builder,
  *   ud_bgl_parse_entry(reader, block, &entry);
  *
  *   // Store definition once
- *   udx_value_address addr = udx_db_builder_add_value(builder,
+ *   udx_value_address_t addr = udx_db_builder_add_value(builder,
  *                                                           entry.definition,
  *                                                           entry.def_len);
  *
@@ -217,7 +217,7 @@ udx_value_address udx_db_builder_add_value(udx_db_builder *builder,
  */
 udx_status_t udx_db_builder_add_key_entry(udx_db_builder *builder,
                                           const char *key,
-                                          udx_value_address value_address,
+                                          udx_value_address_t value_address,
                                           uint32_t value_size);
 
 

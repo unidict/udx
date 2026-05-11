@@ -135,7 +135,7 @@ static udx_index_node *read_index_node(udx_db *db, uint64_t offset) {
     }
 
     // First byte of node data is the type; validate before use
-    node->type = (udx_index_node_type)data[0];
+    node->type = (udx_index_node_type_t)data[0];
     if (node->type != UDX_INDEX_NODE_TYPE_INTERNAL &&
         node->type != UDX_INDEX_NODE_TYPE_LEAF) {
         free(data);
@@ -299,10 +299,10 @@ static size_t parse_entry(const uint8_t *data, size_t available, udx_db_key_entr
         for (uint16_t i = 0; i < item_count; i++) {
             // original_key
             size_t original_len = strlen((const char *)ptr) + 1;
-            if (ptr + original_len + sizeof(udx_value_address) + sizeof(uint32_t) > end) return 0;
+            if (ptr + original_len + sizeof(udx_value_address_t) + sizeof(uint32_t) > end) return 0;
             ptr += original_len;
             // address
-            ptr += sizeof(udx_value_address);
+            ptr += sizeof(udx_value_address_t);
             // data_size
             ptr += sizeof(uint32_t);
         }
@@ -331,7 +331,7 @@ static size_t parse_entry(const uint8_t *data, size_t available, udx_db_key_entr
             // original_key
             const char *original_key = (const char *)ptr;
             size_t original_len = strlen(original_key) + 1;
-            if (ptr + original_len + sizeof(udx_value_address) + sizeof(uint32_t) > end) {
+            if (ptr + original_len + sizeof(udx_value_address_t) + sizeof(uint32_t) > end) {
                 udx_db_key_entry_free(entry);
                 return 0;
             }
@@ -343,9 +343,9 @@ static size_t parse_entry(const uint8_t *data, size_t available, udx_db_key_entr
             ptr += original_len;
 
             // address
-            udx_value_address address;
-            memcpy(&address, ptr, sizeof(udx_value_address));
-            ptr += sizeof(udx_value_address);
+            udx_value_address_t address;
+            memcpy(&address, ptr, sizeof(udx_value_address_t));
+            ptr += sizeof(udx_value_address_t);
 
             // data_size
             uint32_t data_size;
@@ -410,13 +410,13 @@ static const uint8_t *search_leaf_node(const udx_index_node *node,
         for (uint16_t j = 0; j < item_count; j++) {
             // original_key
             size_t original_len = strlen((const char *)current) + 1;
-            if (current + original_len + sizeof(udx_value_address) + sizeof(uint32_t) > node_end) {
+            if (current + original_len + sizeof(udx_value_address_t) + sizeof(uint32_t) > node_end) {
                 free(entry_offsets); return NULL;
             }
             current += original_len;
 
             // address + data_size
-            current += sizeof(udx_value_address);
+            current += sizeof(udx_value_address_t);
             current += sizeof(uint32_t);
         }
     }
@@ -598,13 +598,14 @@ void udx_db_close(udx_db *db) {
 // Internal Lookup Functions (static)
 // ============================================================
 
-udx_db_key_entry *udx_db_key_entry_lookup(udx_db *db, const char *key) {
-    if (db == NULL || key == NULL) return NULL;
+udx_status_t udx_db_key_entry_lookup(udx_db *db, const char *key, udx_db_key_entry **out_entry) {
+    if (db == NULL || key == NULL || out_entry == NULL) return UDX_ERR_INVALID_PARAM;
+    *out_entry = NULL;
 
-    if (db->header.entry_count == 0 || db->root_node == NULL) return NULL;
+    if (db->header.entry_count == 0 || db->root_node == NULL) return UDX_NOT_FOUND;
 
     char *folded_key = udx_fold_string(key);
-    if (folded_key == NULL) return NULL;
+    if (folded_key == NULL) return UDX_ERR_MEMORY;
 
     udx_index_node *current_node = db->root_node;
     bool is_root = true;
@@ -616,7 +617,7 @@ udx_db_key_entry *udx_db_key_entry_lookup(udx_db *db, const char *key) {
         current_node = read_index_node(db, child_offset);
         if (current_node == NULL) {
             free(folded_key);
-            return NULL;
+            return UDX_ERR_IO;
         }
     }
 
@@ -626,25 +627,30 @@ udx_db_key_entry *udx_db_key_entry_lookup(udx_db *db, const char *key) {
 
     if (entry_ptr == NULL) {
         if (!is_root) free_node(current_node);
-        return NULL;
+        return UDX_NOT_FOUND;
     }
 
-    // Parse the found entry BEFORE freeing the node (fix use-after-free)
+    // Parse the found entry BEFORE freeing the node
     udx_db_key_entry *entry = NULL;
     parse_entry(entry_ptr, current_node->data + current_node->size - entry_ptr, &entry);
 
     if (!is_root) free_node(current_node);
-    return entry;
+
+    if (entry == NULL) return UDX_ERR_MEMORY;
+    *out_entry = entry;
+    return UDX_OK;
 }
 
-udx_db_key_entry_array *udx_db_key_entry_prefix_match(udx_db *db, const char *prefix,
-                                                         size_t limit) {
-    if (db == NULL || prefix == NULL) return NULL;
+udx_status_t udx_db_key_entry_prefix_match(udx_db *db, const char *prefix,
+                                                         size_t limit,
+                                                         udx_db_key_entry_array **out_entries) {
+    if (db == NULL || prefix == NULL || out_entries == NULL) return UDX_ERR_INVALID_PARAM;
+    *out_entries = NULL;
 
-    if (db->header.entry_count == 0 || db->root_node == NULL) return NULL;
+    if (db->header.entry_count == 0 || db->root_node == NULL) return UDX_NOT_FOUND;
 
     char *key = udx_fold_string(prefix);
-    if (key == NULL) return NULL;
+    if (key == NULL) return UDX_ERR_MEMORY;
 
     udx_index_node *current_node = db->root_node;
     bool is_root = true;
@@ -656,7 +662,7 @@ udx_db_key_entry_array *udx_db_key_entry_prefix_match(udx_db *db, const char *pr
         current_node = read_index_node(db, child_offset);
         if (current_node == NULL) {
             free(key);
-            return NULL;
+            return UDX_ERR_IO;
         }
     }
 
@@ -667,7 +673,7 @@ udx_db_key_entry_array *udx_db_key_entry_prefix_match(udx_db *db, const char *pr
         if (!read_next_leaf(db, &next_leaf)) {
             free_node(current_node);
             free(key);
-            return NULL;
+            return UDX_ERR_IO;
         }
     }
 
@@ -676,14 +682,14 @@ udx_db_key_entry_array *udx_db_key_entry_prefix_match(udx_db *db, const char *pr
     if (first_entry == NULL) {
         if (!is_root) free_node(current_node);
         free(key);
-        return NULL;
+        return UDX_NOT_FOUND;
     }
 
     udx_db_key_entry_array *result = calloc(1, sizeof(udx_db_key_entry_array));
     if (!result) {
         if (!is_root) free_node(current_node);
         free(key);
-        return NULL;
+        return UDX_ERR_MEMORY;
     }
     const uint8_t *current = first_entry;
     const uint8_t *node_end = current_node->data + current_node->size;
@@ -694,7 +700,7 @@ udx_db_key_entry_array *udx_db_key_entry_prefix_match(udx_db *db, const char *pr
         if (!is_root) free_node(current_node);
         free(key);
         free(result);
-        return NULL;
+        return UDX_ERR_MEMORY;
     }
 
     while (true) {
@@ -711,57 +717,54 @@ udx_db_key_entry_array *udx_db_key_entry_prefix_match(udx_db *db, const char *pr
                 if (!is_root) free_node(current_node);
                 udx_db_key_entry_array_free(result);
                 free(key);
-                return NULL;
+                return UDX_ERR_IO;
             }
 
-            // Add entry to result
             udx_db_key_entry_array_push(result, *entry);
             free(entry);
 
             if (limit > 0 && result->size >= limit) {
-                // Collected enough, stop completely
                 goto cleanup;
             }
 
-            // Move to next entry
             current += entry_size;
         }
 
-        // Check if we exhausted current leaf
         if (current < node_end) {
-            // Didn't reach end, stopped early due to no match
             goto cleanup;
         }
 
-        // Try to continue to next leaf
         if (next_leaf == 0) break;
         if (limit > 0 && result->size >= limit) break;
 
-        // Read next leaf
         udx_index_node *next_node = read_index_node(db, next_leaf);
         if (next_node == NULL) break;
 
-        // Read next_leaf pointer for this node
         if (!read_next_leaf(db, &next_leaf)) {
             free_node(next_node);
             break;
         }
 
-        // Free current node (if not root)
         if (!is_root) free_node(current_node);
         is_root = false;
         current_node = next_node;
 
-        // Setup for new leaf — entries start right after header
         node_end = current_node->data + current_node->size;
         current = current_node->data + sizeof(uint8_t) + sizeof(uint16_t);
     }
 
 cleanup:
     if (!is_root) free_node(current_node);
-
     free(key);
-    return result;
+
+    if (result->size == 0) {
+        free(result->entries);
+        free(result);
+        return UDX_NOT_FOUND;
+    }
+
+    *out_entries = result;
+    return UDX_OK;
 }
 
 // ============================================================
@@ -771,7 +774,7 @@ cleanup:
 /**
  * Internal helper: get data by address and size
  */
-static uint8_t *udx_db_get_data(udx_db *db, udx_value_address address, uint32_t data_size) {
+static uint8_t *udx_db_get_data(udx_db *db, udx_value_address_t address, uint32_t data_size) {
     if (db == NULL || db->chunk_reader == NULL) return NULL;
     return udx_chunk_reader_get_block(db->chunk_reader, address, data_size);
 }
@@ -780,31 +783,28 @@ static uint8_t *udx_db_get_data(udx_db *db, udx_value_address address, uint32_t 
  * Convert udx_db_key_entry to udx_db_value_entry
  * Loads all items for the key
  */
-udx_db_value_entry *udx_db_value_entry_load(udx_db *db, const udx_db_key_entry *key_entry) {
-    if (key_entry == NULL || key_entry->items.size == 0) {
-        return NULL;
-    }
+udx_status_t udx_db_value_entry_load(udx_db *db, const udx_db_key_entry *key_entry, udx_db_value_entry **out_entry) {
+    if (db == NULL || key_entry == NULL || out_entry == NULL) return UDX_ERR_INVALID_PARAM;
+    *out_entry = NULL;
+
+    if (key_entry->items.size == 0) return UDX_NOT_FOUND;
 
     udx_db_value_entry *value_entry = (udx_db_value_entry *)calloc(1, sizeof(udx_db_value_entry));
-    if (value_entry == NULL) {
-        return NULL;
-    }
+    if (value_entry == NULL) return UDX_ERR_MEMORY;
 
     value_entry->key = strdup(key_entry->key);
     if (value_entry->key == NULL) {
         free(value_entry);
-        return NULL;
+        return UDX_ERR_MEMORY;
     }
 
     udx_db_value_entry_item_array_init(&value_entry->items);
 
-    // Reserve space for all items
     if (!udx_db_value_entry_item_array_reserve(&value_entry->items, key_entry->items.size)) {
         udx_db_value_entry_free(value_entry);
-        return NULL;
+        return UDX_ERR_MEMORY;
     }
 
-    // Load data for each item
     for (size_t i = 0; i < key_entry->items.size; i++) {
         udx_key_entry_item *src = &key_entry->items.data[i];
 
@@ -812,7 +812,7 @@ udx_db_value_entry *udx_db_value_entry_load(udx_db *db, const udx_db_key_entry *
         item.original_key = strdup(src->original_key);
         if (item.original_key == NULL) {
             udx_db_value_entry_free(value_entry);
-            return NULL;
+            return UDX_ERR_MEMORY;
         }
 
         item.data = udx_db_get_data(db, src->value_address, src->value_size);
@@ -821,35 +821,34 @@ udx_db_value_entry *udx_db_value_entry_load(udx_db *db, const udx_db_key_entry *
         if (item.data == NULL) {
             free(item.original_key);
             udx_db_value_entry_free(value_entry);
-            return NULL;
+            return UDX_ERR_IO;
         }
 
-        // Push the item (ownership transferred)
         value_entry->items.data[i] = item;
         value_entry->items.size++;
     }
 
-    return value_entry;
+    *out_entry = value_entry;
+    return UDX_OK;
 }
 
-udx_db_value_entry *udx_db_value_entry_lookup(udx_db *db, const char *key) {
-    if (db == NULL || key == NULL) {
-        return NULL;
-    }
+udx_status_t udx_db_value_entry_lookup(udx_db *db, const char *key, udx_db_value_entry **out_entry) {
+    if (db == NULL || key == NULL || out_entry == NULL) return UDX_ERR_INVALID_PARAM;
+    *out_entry = NULL;
 
-    // Use internal index lookup
-    udx_db_key_entry *key_entry = udx_db_key_entry_lookup(db, key);
-    if (key_entry == NULL) {
-        return NULL;
-    }
+    udx_db_key_entry *key_entry = NULL;
+    udx_status_t status = udx_db_key_entry_lookup(db, key, &key_entry);
+    if (status != UDX_OK) return status;
 
-    // Convert to data entry
-    udx_db_value_entry *value_entry = udx_db_value_entry_load(db, key_entry);
+    udx_db_value_entry *value_entry = NULL;
+    status = udx_db_value_entry_load(db, key_entry, &value_entry);
 
-    // Free key_entry
     udx_db_key_entry_free(key_entry);
 
-    return value_entry;
+    if (status != UDX_OK) return status;
+
+    *out_entry = value_entry;
+    return UDX_OK;
 }
 
 // ============================================================
@@ -1099,68 +1098,61 @@ void udx_db_iter_destroy(udx_db_iter *iter) {
     free(iter);
 }
 
-const udx_db_key_entry *udx_db_iter_next(udx_db_iter *iter) {
-    if (iter == NULL) return NULL;
+udx_status_t udx_db_iter_next(udx_db_iter *iter, const udx_db_key_entry **out_entry) {
+    if (iter == NULL || out_entry == NULL) return UDX_ERR_INVALID_PARAM;
+    *out_entry = NULL;
 
     // Free previous entry
     udx_db_key_entry_free_contents(&iter->current_entry);
 
     // Traverse until we find the next entry
     while (true) {
-        // Check if current leaf has more entries
         if (iter->current_index < iter->entry_count) {
-            // Parse current entry using parse_entry
             udx_db_key_entry *key_entry = NULL;
             size_t entry_size = parse_entry(iter->current_ptr,
                                            iter->leaf_node->data + iter->leaf_node->size - iter->current_ptr,
                                            &key_entry);
 
             if (entry_size == 0 || key_entry == NULL) {
-                return NULL;
+                return UDX_ERR_IO;
             }
 
-            // Advance pointer
             iter->current_ptr += entry_size;
             iter->current_index++;
 
             // Transfer ownership of key_entry internals to current_entry
             iter->current_entry = *key_entry;
-            free(key_entry);  // Free wrapper only, contents now owned by current_entry
+            free(key_entry);
 
-            return &iter->current_entry;
+            *out_entry = &iter->current_entry;
+            return UDX_OK;
         }
 
         // Current leaf exhausted, try to read next leaf
         if (iter->next_leaf_offset == 0) {
-            // No more leaves
-            return NULL;
+            return UDX_NOT_FOUND;
         }
 
-        // Read next leaf node
         udx_index_node *new_leaf = read_index_node(iter->db, iter->next_leaf_offset);
         if (new_leaf == NULL) {
-            return NULL;
+            return UDX_ERR_IO;
         }
 
-        // Read next_leaf pointer
         uint64_t next_leaf;
         if (!read_next_leaf(iter->db, &next_leaf)) {
             free_node(new_leaf);
-            return NULL;
+            return UDX_ERR_IO;
         }
 
         free_node(iter->leaf_node);
         iter->leaf_node = new_leaf;
         iter->next_leaf_offset = next_leaf;
 
-        // Parse new leaf node header
         ud_index_leaf_node_info info = parse_leaf_node(iter->leaf_node);
         iter->entry_count = info.entry_count;
 
         const uint8_t *ptr = iter->leaf_node->data + sizeof(uint8_t) + sizeof(uint16_t);
         iter->current_index = 0;
         iter->current_ptr = ptr;
-
-        // Continue loop to read first entry
     }
 }

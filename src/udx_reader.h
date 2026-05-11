@@ -75,17 +75,19 @@ uint32_t udx_db_get_item_count(const udx_db *db);
 
 /**
  * Look up a key entry by key (case-insensitive)
- * @return Key entry (caller must free with udx_db_key_entry_free), or NULL if not found
+ * @param out_entry Output: key entry (caller must free with udx_db_key_entry_free)
+ * @return UDX_OK on success, UDX_NOT_FOUND if key not found, UDX_ERR_* on error
  */
-udx_db_key_entry *udx_db_key_entry_lookup(udx_db *db, const char *key);
+udx_status_t udx_db_key_entry_lookup(udx_db *db, const char *key, udx_db_key_entry **out_entry);
 
 /**
  * Find all key entries matching a prefix (case-insensitive)
  * @param prefix Prefix to match
  * @param limit Maximum number of results (0 = unlimited)
- * @return Array of key entries (caller must free with udx_db_key_entry_array_free), or NULL on error
+ * @param out_entries Output: array of key entries (caller must free with udx_db_key_entry_array_free)
+ * @return UDX_OK on success, UDX_NOT_FOUND if no matches, UDX_ERR_* on error
  */
-udx_db_key_entry_array *udx_db_key_entry_prefix_match(udx_db *db, const char *prefix, size_t limit);
+udx_status_t udx_db_key_entry_prefix_match(udx_db *db, const char *prefix, size_t limit, udx_db_key_entry_array **out_entries);
 
 // ============================================================
 // Value Entry Lookup
@@ -93,15 +95,17 @@ udx_db_key_entry_array *udx_db_key_entry_prefix_match(udx_db *db, const char *pr
 
 /**
  * Look up a value entry by key (case-insensitive)
- * @return Value entry (caller must free with udx_db_value_entry_free), or NULL if not found
+ * @param out_entry Output: value entry (caller must free with udx_db_value_entry_free)
+ * @return UDX_OK on success, UDX_NOT_FOUND if key not found, UDX_ERR_* on error
  */
-udx_db_value_entry *udx_db_value_entry_lookup(udx_db *db, const char *key);
+udx_status_t udx_db_value_entry_lookup(udx_db *db, const char *key, udx_db_value_entry **out_entry);
 
 /**
- * Convert a key entry to a value entry by loading data for all items
- * @return Value entry (caller must free with udx_db_value_entry_free), or NULL on error
+ * Load data for all items in a key entry
+ * @param out_entry Output: value entry (caller must free with udx_db_value_entry_free)
+ * @return UDX_OK on success, UDX_NOT_FOUND if key not found, UDX_ERR_* on error
  */
-udx_db_value_entry *udx_db_value_entry_load(udx_db *db, const udx_db_key_entry *key_entry);
+udx_status_t udx_db_value_entry_load(udx_db *db, const udx_db_key_entry *key_entry, udx_db_value_entry **out_entry);
 
 // ============================================================
 // Iterator
@@ -109,7 +113,13 @@ udx_db_value_entry *udx_db_value_entry_load(udx_db *db, const udx_db_key_entry *
 
 udx_db_iter *udx_db_iter_create(udx_db *db);
 void udx_db_iter_destroy(udx_db_iter *iter);
-const udx_db_key_entry *udx_db_iter_next(udx_db_iter *iter);
+
+/**
+ * Get the next key entry from the iterator
+ * @param out_entry Output: pointer to internal entry (valid until next call or destroy)
+ * @return UDX_OK on success, UDX_NOT_FOUND if no more entries, UDX_ERR_* on error
+ */
+udx_status_t udx_db_iter_next(udx_db_iter *iter, const udx_db_key_entry **out_entry);
 
 #ifdef __cplusplus
 }
