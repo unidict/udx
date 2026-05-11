@@ -5,6 +5,7 @@
 //  Created by kejinlu on 2026/2/25.
 //
 
+#include "udx_types_internal.h"
 #include "udx_keys.h"
 #include "udx_utils.h"
 #include "udx_btree.h"
@@ -80,7 +81,7 @@ void udx_keys_destroy(udx_keys *keys) {
 
 bool udx_keys_add(udx_keys *keys,
                           const char *key,
-                          udx_value_address_t value_address,
+                          udx_value_address value_address,
                           uint32_t value_size) {
     if (keys == NULL || key == NULL) {
         return false;

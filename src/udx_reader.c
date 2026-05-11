@@ -6,6 +6,7 @@
 //
 
 #include "udx_reader.h"
+#include "udx_types_internal.h"
 #include "udx_chunk.h"
 #include "udx_utils.h"
 #include <stdio.h>
@@ -135,7 +136,7 @@ static udx_index_node *read_index_node(udx_db *db, uint64_t offset) {
     }
 
     // First byte of node data is the type; validate before use
-    node->type = (udx_index_node_type_t)data[0];
+    node->type = (udx_index_node_type)data[0];
     if (node->type != UDX_INDEX_NODE_TYPE_INTERNAL &&
         node->type != UDX_INDEX_NODE_TYPE_LEAF) {
         free(data);
@@ -299,10 +300,10 @@ static size_t parse_entry(const uint8_t *data, size_t available, udx_db_key_entr
         for (uint16_t i = 0; i < item_count; i++) {
             // original_key
             size_t original_len = strlen((const char *)ptr) + 1;
-            if (ptr + original_len + sizeof(udx_value_address_t) + sizeof(uint32_t) > end) return 0;
+            if (ptr + original_len + sizeof(udx_value_address) + sizeof(uint32_t) > end) return 0;
             ptr += original_len;
             // address
-            ptr += sizeof(udx_value_address_t);
+            ptr += sizeof(udx_value_address);
             // data_size
             ptr += sizeof(uint32_t);
         }
@@ -331,7 +332,7 @@ static size_t parse_entry(const uint8_t *data, size_t available, udx_db_key_entr
             // original_key
             const char *original_key = (const char *)ptr;
             size_t original_len = strlen(original_key) + 1;
-            if (ptr + original_len + sizeof(udx_value_address_t) + sizeof(uint32_t) > end) {
+            if (ptr + original_len + sizeof(udx_value_address) + sizeof(uint32_t) > end) {
                 udx_db_key_entry_free(entry);
                 return 0;
             }
@@ -343,9 +344,9 @@ static size_t parse_entry(const uint8_t *data, size_t available, udx_db_key_entr
             ptr += original_len;
 
             // address
-            udx_value_address_t address;
-            memcpy(&address, ptr, sizeof(udx_value_address_t));
-            ptr += sizeof(udx_value_address_t);
+            udx_value_address address;
+            memcpy(&address, ptr, sizeof(udx_value_address));
+            ptr += sizeof(udx_value_address);
 
             // data_size
             uint32_t data_size;
@@ -410,13 +411,13 @@ static const uint8_t *search_leaf_node(const udx_index_node *node,
         for (uint16_t j = 0; j < item_count; j++) {
             // original_key
             size_t original_len = strlen((const char *)current) + 1;
-            if (current + original_len + sizeof(udx_value_address_t) + sizeof(uint32_t) > node_end) {
+            if (current + original_len + sizeof(udx_value_address) + sizeof(uint32_t) > node_end) {
                 free(entry_offsets); return NULL;
             }
             current += original_len;
 
             // address + data_size
-            current += sizeof(udx_value_address_t);
+            current += sizeof(udx_value_address);
             current += sizeof(uint32_t);
         }
     }
@@ -598,7 +599,7 @@ void udx_db_close(udx_db *db) {
 // Internal Lookup Functions (static)
 // ============================================================
 
-udx_status_t udx_db_key_entry_lookup(udx_db *db, const char *key, udx_db_key_entry **out_entry) {
+udx_status udx_db_key_entry_lookup(udx_db *db, const char *key, udx_db_key_entry **out_entry) {
     if (db == NULL || key == NULL || out_entry == NULL) return UDX_ERR_INVALID_PARAM;
     *out_entry = NULL;
 
@@ -641,7 +642,7 @@ udx_status_t udx_db_key_entry_lookup(udx_db *db, const char *key, udx_db_key_ent
     return UDX_OK;
 }
 
-udx_status_t udx_db_key_entry_prefix_match(udx_db *db, const char *prefix,
+udx_status udx_db_key_entry_prefix_match(udx_db *db, const char *prefix,
                                                          size_t limit,
                                                          udx_db_key_entry_array **out_entries) {
     if (db == NULL || prefix == NULL || out_entries == NULL) return UDX_ERR_INVALID_PARAM;
@@ -774,7 +775,7 @@ cleanup:
 /**
  * Internal helper: get data by address and size
  */
-static uint8_t *udx_db_get_data(udx_db *db, udx_value_address_t address, uint32_t data_size) {
+static uint8_t *udx_db_get_data(udx_db *db, udx_value_address address, uint32_t data_size) {
     if (db == NULL || db->chunk_reader == NULL) return NULL;
     return udx_chunk_reader_get_block(db->chunk_reader, address, data_size);
 }
@@ -783,7 +784,7 @@ static uint8_t *udx_db_get_data(udx_db *db, udx_value_address_t address, uint32_
  * Convert udx_db_key_entry to udx_db_value_entry
  * Loads all items for the key
  */
-udx_status_t udx_db_value_entry_load(udx_db *db, const udx_db_key_entry *key_entry, udx_db_value_entry **out_entry) {
+udx_status udx_db_value_entry_load(udx_db *db, const udx_db_key_entry *key_entry, udx_db_value_entry **out_entry) {
     if (db == NULL || key_entry == NULL || out_entry == NULL) return UDX_ERR_INVALID_PARAM;
     *out_entry = NULL;
 
@@ -832,12 +833,12 @@ udx_status_t udx_db_value_entry_load(udx_db *db, const udx_db_key_entry *key_ent
     return UDX_OK;
 }
 
-udx_status_t udx_db_value_entry_lookup(udx_db *db, const char *key, udx_db_value_entry **out_entry) {
+udx_status udx_db_value_entry_lookup(udx_db *db, const char *key, udx_db_value_entry **out_entry) {
     if (db == NULL || key == NULL || out_entry == NULL) return UDX_ERR_INVALID_PARAM;
     *out_entry = NULL;
 
     udx_db_key_entry *key_entry = NULL;
-    udx_status_t status = udx_db_key_entry_lookup(db, key, &key_entry);
+    udx_status status = udx_db_key_entry_lookup(db, key, &key_entry);
     if (status != UDX_OK) return status;
 
     udx_db_value_entry *value_entry = NULL;
@@ -1098,7 +1099,7 @@ void udx_db_iter_destroy(udx_db_iter *iter) {
     free(iter);
 }
 
-udx_status_t udx_db_iter_next(udx_db_iter *iter, const udx_db_key_entry **out_entry) {
+udx_status udx_db_iter_next(udx_db_iter *iter, const udx_db_key_entry **out_entry) {
     if (iter == NULL || out_entry == NULL) return UDX_ERR_INVALID_PARAM;
     *out_entry = NULL;
 

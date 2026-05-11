@@ -7,6 +7,7 @@
 
 #include "unity.h"
 #include "udx_keys.h"
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -38,7 +39,7 @@ void test_words_add_single(void) {
     udx_keys* words = udx_keys_create();
     TEST_ASSERT_NOT_NULL(words);
 
-    udx_value_address_t addr = 0x0001000100020003ULL;
+    udx_value_address addr = 0x0001000100020003ULL;
     uint32_t data_size = 100;
 
     bool result = udx_keys_add(words, "hello", addr, data_size);
@@ -54,7 +55,7 @@ void test_words_add_multiple_unique(void) {
     udx_keys* words = udx_keys_create();
     TEST_ASSERT_NOT_NULL(words);
 
-    udx_value_address_t addr = 0x0001000100020003ULL;
+    udx_value_address addr = 0x0001000100020003ULL;
     uint32_t data_size = 100;
 
     // Add multiple unique words
@@ -76,8 +77,8 @@ void test_words_add_duplicate_words(void) {
     udx_keys* words = udx_keys_create();
     TEST_ASSERT_NOT_NULL(words);
 
-    udx_value_address_t addr1 = 0x0001000100020003ULL;
-    udx_value_address_t addr2 = 0x0001000100020004ULL;
+    udx_value_address addr1 = 0x0001000100020003ULL;
+    udx_value_address addr2 = 0x0001000100020004ULL;
     uint32_t data_size = 100;
 
     // Add same word multiple times (case variants)
@@ -96,7 +97,7 @@ void test_words_add_null_word(void) {
     udx_keys* words = udx_keys_create();
     TEST_ASSERT_NOT_NULL(words);
 
-    udx_value_address_t addr = 0x0001000100020003ULL;
+    udx_value_address addr = 0x0001000100020003ULL;
     uint32_t data_size = 100;
 
     bool result = udx_keys_add(words, NULL, addr, data_size);
@@ -106,7 +107,7 @@ void test_words_add_null_word(void) {
 }
 
 void test_words_add_null_container(void) {
-    udx_value_address_t addr = 0x0001000100020003ULL;
+    udx_value_address addr = 0x0001000100020003ULL;
     bool result = udx_keys_add(NULL, "hello", addr, 100);
     TEST_ASSERT_FALSE(result);
 }
@@ -115,7 +116,7 @@ void test_words_add_empty_string(void) {
     udx_keys* words = udx_keys_create();
     TEST_ASSERT_NOT_NULL(words);
 
-    udx_value_address_t addr = 0x0001000100020003ULL;
+    udx_value_address addr = 0x0001000100020003ULL;
     uint32_t data_size = 100;
 
     bool result = udx_keys_add(words, "", addr, data_size);

@@ -93,7 +93,7 @@ void test_reader_lookup(void) {
 
     // Case-insensitive lookup: "hello" should match both "hello" and "Hello"
     udx_db_value_entry* entry = NULL;
-    udx_status_t status = udx_db_value_entry_lookup(db, "hello", &entry);
+    udx_status status = udx_db_value_entry_lookup(db, "hello", &entry);
     TEST_ASSERT_EQUAL_INT_MESSAGE(UDX_OK, status, "lookup should succeed");
     TEST_ASSERT_NOT_NULL_MESSAGE(entry, "entry should be found");
 
@@ -127,7 +127,7 @@ void test_reader_prefix_match(void) {
 
     // Prefix match should find both "hello" and "Hello"
     udx_db_key_entry_array *results = NULL;
-    udx_status_t status = udx_db_key_entry_prefix_match(db, "he", 10, &results);
+    udx_status status = udx_db_key_entry_prefix_match(db, "he", 10, &results);
     TEST_ASSERT_EQUAL_INT_MESSAGE(UDX_OK, status, "prefix match should succeed");
     TEST_ASSERT_NOT_NULL_MESSAGE(results, "prefix match should return results");
     TEST_ASSERT_EQUAL_UINT32_MESSAGE(1, results->count, "should find 1 entry (both hello/Hello map to same folded word)");
@@ -164,7 +164,7 @@ void test_reader_iterator(void) {
 
     // Should iterate through all 2 unique key entries: "hello" (with 2 items) and "test" (with 1 item)
     const udx_db_key_entry* entry;
-    udx_status_t status;
+    udx_status status;
 
     // First entry: "hello" with 2 items
     status = udx_db_iter_next(iter, &entry);
@@ -203,9 +203,9 @@ void test_reader_case_insensitive(void) {
     udx_db_value_entry* e1 = NULL;
     udx_db_value_entry* e2 = NULL;
     udx_db_value_entry* e3 = NULL;
-    udx_status_t s1 = udx_db_value_entry_lookup(db, "hello", &e1);
-    udx_status_t s2 = udx_db_value_entry_lookup(db, "HELLO", &e2);
-    udx_status_t s3 = udx_db_value_entry_lookup(db, "HeLLo", &e3);
+    udx_status s1 = udx_db_value_entry_lookup(db, "hello", &e1);
+    udx_status s2 = udx_db_value_entry_lookup(db, "HELLO", &e2);
+    udx_status s3 = udx_db_value_entry_lookup(db, "HeLLo", &e3);
 
     TEST_ASSERT_EQUAL_INT(UDX_OK, s1);
     TEST_ASSERT_EQUAL_INT(UDX_OK, s2);

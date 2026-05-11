@@ -78,7 +78,7 @@ uint32_t udx_db_get_item_count(const udx_db *db);
  * @param out_entry Output: key entry (caller must free with udx_db_key_entry_free)
  * @return UDX_OK on success, UDX_NOT_FOUND if key not found, UDX_ERR_* on error
  */
-udx_status_t udx_db_key_entry_lookup(udx_db *db, const char *key, udx_db_key_entry **out_entry);
+udx_status udx_db_key_entry_lookup(udx_db *db, const char *key, udx_db_key_entry **out_entry);
 
 /**
  * Find all key entries matching a prefix (case-insensitive)
@@ -87,7 +87,7 @@ udx_status_t udx_db_key_entry_lookup(udx_db *db, const char *key, udx_db_key_ent
  * @param out_entries Output: array of key entries (caller must free with udx_db_key_entry_array_free)
  * @return UDX_OK on success, UDX_NOT_FOUND if no matches, UDX_ERR_* on error
  */
-udx_status_t udx_db_key_entry_prefix_match(udx_db *db, const char *prefix, size_t limit, udx_db_key_entry_array **out_entries);
+udx_status udx_db_key_entry_prefix_match(udx_db *db, const char *prefix, size_t limit, udx_db_key_entry_array **out_entries);
 
 // ============================================================
 // Value Entry Lookup
@@ -98,14 +98,14 @@ udx_status_t udx_db_key_entry_prefix_match(udx_db *db, const char *prefix, size_
  * @param out_entry Output: value entry (caller must free with udx_db_value_entry_free)
  * @return UDX_OK on success, UDX_NOT_FOUND if key not found, UDX_ERR_* on error
  */
-udx_status_t udx_db_value_entry_lookup(udx_db *db, const char *key, udx_db_value_entry **out_entry);
+udx_status udx_db_value_entry_lookup(udx_db *db, const char *key, udx_db_value_entry **out_entry);
 
 /**
  * Load data for all items in a key entry
  * @param out_entry Output: value entry (caller must free with udx_db_value_entry_free)
  * @return UDX_OK on success, UDX_NOT_FOUND if key not found, UDX_ERR_* on error
  */
-udx_status_t udx_db_value_entry_load(udx_db *db, const udx_db_key_entry *key_entry, udx_db_value_entry **out_entry);
+udx_status udx_db_value_entry_load(udx_db *db, const udx_db_key_entry *key_entry, udx_db_value_entry **out_entry);
 
 // ============================================================
 // Iterator
@@ -119,7 +119,7 @@ void udx_db_iter_destroy(udx_db_iter *iter);
  * @param out_entry Output: pointer to internal entry (valid until next call or destroy)
  * @return UDX_OK on success, UDX_NOT_FOUND if no more entries, UDX_ERR_* on error
  */
-udx_status_t udx_db_iter_next(udx_db_iter *iter, const udx_db_key_entry **out_entry);
+udx_status udx_db_iter_next(udx_db_iter *iter, const udx_db_key_entry **out_entry);
 
 #ifdef __cplusplus
 }

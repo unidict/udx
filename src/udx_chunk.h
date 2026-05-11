@@ -43,7 +43,7 @@ udx_chunk_writer *udx_chunk_writer_open(FILE *file);
  *       Blocks larger than UDX_CHUNK_MAX_SIZE (64KB) are allowed and will
  *       occupy a dedicated chunk.
  */
-udx_value_address_t udx_chunk_writer_add_block(udx_chunk_writer *writer,
+udx_value_address udx_chunk_writer_add_block(udx_chunk_writer *writer,
                                               const uint8_t *data,
                                               uint32_t size);
 
@@ -92,7 +92,7 @@ void udx_chunk_reader_destroy(udx_chunk_reader *reader);
  * @return Data pointer (caller must free), or NULL on failure
  */
 uint8_t *udx_chunk_reader_get_block(udx_chunk_reader *reader,
-                                    udx_value_address_t address,
+                                    udx_value_address address,
                                     uint32_t data_size);
 
 /**
