@@ -173,7 +173,7 @@ void test_writer_close_with_active_builder(void) {
     // Note: The library will close the file and free the writer even when returning error
     // Resources will leak in this error case, but that's a library design issue
     udx_status_t result = udx_writer_close(writer);
-    TEST_ASSERT_EQUAL_INT_MESSAGE(UDX_ERR_ACTIVE_DB, result,
+    TEST_ASSERT_EQUAL_INT_MESSAGE(UDX_ERR_STATE, result,
         "close with active builder should fail");
 
     // Clean up the test file (resources are leaked due to library design)

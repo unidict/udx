@@ -522,7 +522,7 @@ See `udx_types.h` for the complete definition of data types used in the API, inc
 - `udx_db_key_entry` - Index entry with addresses (no data)
 - `udx_db_value_entry` - Database entry with data loaded
 - `udx_db_key_entry_array` - Array of index entries
-- `udx_value_address` - Address encoding (chunk index + offset)
+- `udx_value_address_t` - Address encoding (chunk index + offset)
 
 Memory management functions:
 - `udx_key_entry_free()` - Free an index entry

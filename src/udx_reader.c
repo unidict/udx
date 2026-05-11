@@ -723,7 +723,7 @@ udx_status_t udx_db_key_entry_prefix_match(udx_db *db, const char *prefix,
             udx_db_key_entry_array_push(result, *entry);
             free(entry);
 
-            if (limit > 0 && result->size >= limit) {
+            if (limit > 0 && result->count >= limit) {
                 goto cleanup;
             }
 
@@ -735,7 +735,7 @@ udx_status_t udx_db_key_entry_prefix_match(udx_db *db, const char *prefix,
         }
 
         if (next_leaf == 0) break;
-        if (limit > 0 && result->size >= limit) break;
+        if (limit > 0 && result->count >= limit) break;
 
         udx_index_node *next_node = read_index_node(db, next_leaf);
         if (next_node == NULL) break;
@@ -757,8 +757,8 @@ cleanup:
     if (!is_root) free_node(current_node);
     free(key);
 
-    if (result->size == 0) {
-        free(result->entries);
+    if (result->count == 0) {
+        free(result->elements);
         free(result);
         return UDX_NOT_FOUND;
     }
@@ -787,7 +787,7 @@ udx_status_t udx_db_value_entry_load(udx_db *db, const udx_db_key_entry *key_ent
     if (db == NULL || key_entry == NULL || out_entry == NULL) return UDX_ERR_INVALID_PARAM;
     *out_entry = NULL;
 
-    if (key_entry->items.size == 0) return UDX_NOT_FOUND;
+    if (key_entry->items.count == 0) return UDX_NOT_FOUND;
 
     udx_db_value_entry *value_entry = (udx_db_value_entry *)calloc(1, sizeof(udx_db_value_entry));
     if (value_entry == NULL) return UDX_ERR_MEMORY;
@@ -800,13 +800,13 @@ udx_status_t udx_db_value_entry_load(udx_db *db, const udx_db_key_entry *key_ent
 
     udx_db_value_entry_item_array_init(&value_entry->items);
 
-    if (!udx_db_value_entry_item_array_reserve(&value_entry->items, key_entry->items.size)) {
+    if (!udx_db_value_entry_item_array_reserve(&value_entry->items, key_entry->items.count)) {
         udx_db_value_entry_free(value_entry);
         return UDX_ERR_MEMORY;
     }
 
-    for (size_t i = 0; i < key_entry->items.size; i++) {
-        udx_key_entry_item *src = &key_entry->items.data[i];
+    for (size_t i = 0; i < key_entry->items.count; i++) {
+        udx_key_entry_item *src = &key_entry->items.elements[i];
 
         udx_value_entry_item item;
         item.original_key = strdup(src->original_key);
@@ -824,8 +824,8 @@ udx_status_t udx_db_value_entry_load(udx_db *db, const udx_db_key_entry *key_ent
             return UDX_ERR_IO;
         }
 
-        value_entry->items.data[i] = item;
-        value_entry->items.size++;
+        value_entry->items.elements[i] = item;
+        value_entry->items.count++;
     }
 
     *out_entry = value_entry;

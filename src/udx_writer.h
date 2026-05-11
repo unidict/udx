@@ -38,7 +38,7 @@ udx_writer *udx_writer_open(const char *output_path);
  * Close the writer and finalize the UDX file
  * @param writer Writer pointer
  * @return UDX_OK on success, error code on failure:
- *         UDX_ERR_ACTIVE_DB: a database builder is still active
+ *         UDX_ERR_STATE: a database builder is still active
  *         UDX_ERR_IO: file I/O error
  *
  * @note All builders must be finished before closing
@@ -53,7 +53,7 @@ udx_status_t udx_writer_close(udx_writer *writer);
  * Create a database builder (without metadata)
  * @param writer Writer pointer
  * @param name Database name (must be unique within the file)
- * @return Builder pointer, or NULL on failure (UDX_ERR_MEMORY, UDX_ERR_ACTIVE_DB, UDX_ERR_DUPLICATE_NAME)
+ * @return Builder pointer, or NULL on failure (UDX_ERR_MEMORY, UDX_ERR_STATE)
  *
  * @note This is equivalent to calling udx_db_builder_create_with_metadata
  *       with metadata=NULL and metadata_size=0
@@ -66,8 +66,7 @@ udx_db_builder *udx_db_builder_create(udx_writer *writer, const char *name);
  * @param name Database name (must be unique within the file)
  * @param metadata Metadata bytes (can be NULL if metadata_size is 0)
  * @param metadata_size Size of metadata in bytes (must be 0 if metadata is NULL)
- * @return Builder pointer, or NULL on failure (UDX_ERR_MEMORY, UDX_ERR_ACTIVE_DB,
- *         UDX_ERR_DUPLICATE_NAME, UDX_ERR_METADATA)
+ * @return Builder pointer, or NULL on failure (UDX_ERR_MEMORY, UDX_ERR_STATE)
  *
  * @note Constraint: if metadata is NULL, metadata_size MUST be 0.
  *       Conversely, if metadata_size > 0, metadata MUST NOT be NULL.
@@ -84,8 +83,8 @@ udx_db_builder *udx_db_builder_create_with_metadata(udx_writer *writer,
  * @param builder Builder pointer
  * @return UDX_OK on success, error code on failure:
  *         UDX_ERR_INVALID_PARAM: invalid parameter or empty database (no entries added)
- *         UDX_ERR_CHUNK: chunk writer failed
- *         UDX_ERR_BPTREE: B+ tree build failed
+ *         UDX_ERR_INTERNAL: chunk writer failed
+ *         UDX_ERR_INTERNAL: B+ tree build failed
  *         UDX_ERR_HEADER: header write failed
  *
  * @note After this call, the builder is freed and must not be used again
@@ -101,8 +100,8 @@ udx_status_t udx_db_builder_finalize(udx_db_builder *builder);
  * @param value_size Size of value in bytes (maximum: 4 GB, recommended: < 64 KB)
  * @return UDX_OK on success, error code on failure:
  *         UDX_ERR_INVALID_PARAM: invalid parameter or value_size exceeds maximum
- *         UDX_ERR_CHUNK: chunk writer failed
- *         UDX_ERR_KEYS: keys container failed
+ *         UDX_ERR_INTERNAL: chunk writer failed
+ *         UDX_ERR_INTERNAL: keys container failed
  *
  * @note Multiple entries can be added under the same key
  * @note The original key case is preserved
@@ -177,7 +176,7 @@ udx_value_address_t udx_db_builder_add_value(udx_db_builder *builder,
  * @param value_size Size of value in bytes
  * @return UDX_OK on success, error code on failure:
  *         UDX_ERR_INVALID_PARAM: invalid parameter
- *         UDX_ERR_KEYS: keys container failed
+ *         UDX_ERR_INTERNAL: keys container failed
  *
  * @note This function only adds key->address mapping to index
  * @note Use udx_db_builder_add_value first to store data

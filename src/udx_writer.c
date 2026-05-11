@@ -112,14 +112,14 @@ static size_t serialize_index_entry_into(const udx_db_key_entry *entry,
     // Format: [folded_key\0] [item_count:u16] [items...]
     //   item: [original_key\0] [address:u64] [data_size:u32]
 
-    if (entry->items.size > UINT16_MAX) return 0;
+    if (entry->items.count > UINT16_MAX) return 0;
 
     // Calculate required size
     size_t key_len = strlen(entry->key) + 1;
-    uint16_t item_count = (uint16_t)entry->items.size;
+    uint16_t item_count = (uint16_t)entry->items.count;
     size_t items_size = 0;
-    for (size_t i = 0; i < entry->items.size; i++) {
-        items_size += strlen(entry->items.data[i].original_key) + 1;
+    for (size_t i = 0; i < entry->items.count; i++) {
+        items_size += strlen(entry->items.elements[i].original_key) + 1;
         items_size += sizeof(udx_value_address_t);
         items_size += sizeof(uint32_t);  // data_size
     }
@@ -149,8 +149,8 @@ static size_t serialize_index_entry_into(const udx_db_key_entry *entry,
     ptr += sizeof(uint16_t);
 
     // items
-    for (size_t i = 0; i < entry->items.size; i++) {
-        const udx_key_entry_item *item = &entry->items.data[i];
+    for (size_t i = 0; i < entry->items.count; i++) {
+        const udx_key_entry_item *item = &entry->items.elements[i];
         size_t original_len = strlen(item->original_key) + 1;
         memcpy(ptr, item->original_key, original_len);
         ptr += original_len;
@@ -413,13 +413,13 @@ udx_status_t udx_writer_close(udx_writer *writer) {
 
     // Caller must finish all builders before closing
     if (writer->has_db_active) {
-        result = UDX_ERR_ACTIVE_DB;
+        result = UDX_ERR_STATE;
         goto cleanup;
     }
 
     // Write db table at current position (end of file)
     // Format: [(offset:u64, name: null-terminated string)] × db_count
-    uint16_t db_count = writer->db_offsets.size;
+    uint16_t db_count = writer->db_offsets.count;
 
     int64_t db_table_offset = udx_ftell(writer->file);
     if (db_table_offset < 0) {
@@ -429,13 +429,13 @@ udx_status_t udx_writer_close(udx_writer *writer) {
 
     for (uint16_t i = 0; i < db_count; i++) {
         // Write offset
-        if (fwrite(&writer->db_offsets.data[i], sizeof(uint64_t), 1, writer->file) != 1) {
+        if (fwrite(&writer->db_offsets.elements[i], sizeof(uint64_t), 1, writer->file) != 1) {
             result = UDX_ERR_IO;
             goto cleanup;
         }
 
         // Write name (including null terminator)
-        const char *name = writer->db_names.data[i];
+        const char *name = writer->db_names.elements[i];
         if (name != NULL) {
             size_t len = strlen(name) + 1;
             if (fwrite(name, 1, len, writer->file) != len) {
@@ -470,8 +470,8 @@ udx_status_t udx_writer_close(udx_writer *writer) {
 cleanup:
     if (writer->file) fclose(writer->file);
 
-    for (size_t i = 0; i < writer->db_names.size; i++) {
-        free(writer->db_names.data[i]);
+    for (size_t i = 0; i < writer->db_names.count; i++) {
+        free(writer->db_names.elements[i]);
     }
     udx_string_array_free(&writer->db_names);
     udx_uint64_array_free(&writer->db_offsets);
@@ -505,13 +505,13 @@ udx_db_builder *udx_db_builder_create_with_metadata(udx_writer *writer,
     }
 
     // Check db count limit (uint16_t in header)
-    if (writer->db_offsets.size >= UINT16_MAX) {
+    if (writer->db_offsets.count >= UINT16_MAX) {
         return NULL;
     }
 
     // Check for duplicate name
-    for (size_t i = 0; i < writer->db_names.size; i++) {
-        if (strcmp(writer->db_names.data[i], name) == 0) {
+    for (size_t i = 0; i < writer->db_names.count; i++) {
+        if (strcmp(writer->db_names.elements[i], name) == 0) {
             return NULL;  // Duplicate name
         }
     }
@@ -565,7 +565,7 @@ udx_db_builder *udx_db_builder_create_with_metadata(udx_writer *writer,
     }
     if (!udx_string_array_push(&writer->db_names, name_copy)) {
         // Rollback the offset push to keep arrays in sync
-        writer->db_offsets.size--;
+        writer->db_offsets.count--;
         free(name_copy);
         goto error;
     }
@@ -613,13 +613,13 @@ udx_status_t udx_db_builder_finalize(udx_db_builder *builder) {
     // 1. Finish chunk table (writes chunk table at current position)
     uint64_t chunks_offset = udx_chunk_writer_finish(builder->chunk_writer);
     if (chunks_offset == 0) {
-        result = UDX_ERR_CHUNK;
+        result = UDX_ERR_INTERNAL;
         goto cleanup;
     }
 
     // 2. Build B+ tree
     if (!build_bptree(builder)) {
-        result = UDX_ERR_BPTREE;
+        result = UDX_ERR_INTERNAL;
         goto cleanup;
     }
 
@@ -666,12 +666,12 @@ cleanup:
 
     if (result != 0) {
         // Rollback: remove the offset/name pushed during create
-        if (writer->db_names.size > 0) {
-            free(writer->db_names.data[writer->db_names.size - 1]);
-            writer->db_names.size--;
+        if (writer->db_names.count > 0) {
+            free(writer->db_names.elements[writer->db_names.count - 1]);
+            writer->db_names.count--;
         }
-        if (writer->db_offsets.size > 0) {
-            writer->db_offsets.size--;
+        if (writer->db_offsets.count > 0) {
+            writer->db_offsets.count--;
         }
         // Seek file pointer back so subsequent writes start clean
         udx_fseek(writer->file, builder->db_offset, SEEK_SET);
@@ -693,9 +693,9 @@ udx_status_t udx_db_builder_add_entry(udx_db_builder *builder,
     }
 
     udx_value_address_t address = udx_chunk_writer_add_block(builder->chunk_writer, value, value_size);
-    if (address == UDX_INVALID_ADDRESS) return UDX_ERR_CHUNK;
+    if (address == UDX_INVALID_ADDRESS) return UDX_ERR_INTERNAL;
 
-    return udx_keys_add(builder->keys, key, address, value_size) ? UDX_OK : UDX_ERR_KEYS;
+    return udx_keys_add(builder->keys, key, address, value_size) ? UDX_OK : UDX_ERR_INTERNAL;
 }
 
 udx_value_address_t udx_db_builder_add_value(udx_db_builder *builder,
@@ -720,6 +720,6 @@ udx_status_t udx_db_builder_add_key_entry(udx_db_builder *builder,
         return UDX_ERR_INVALID_PARAM;
     }
 
-    return udx_keys_add(builder->keys, key, value_address, value_size) ? UDX_OK : UDX_ERR_KEYS;
+    return udx_keys_add(builder->keys, key, value_address, value_size) ? UDX_OK : UDX_ERR_INTERNAL;
 }
 
