@@ -226,9 +226,9 @@ typedef struct {
     uint64_t chunk_table_offset;
     uint64_t index_root_offset;
     uint64_t index_first_leaf_offset;
+    uint32_t index_bptree_height;
     uint32_t entry_count;
     uint32_t item_count;
-    uint32_t index_bptree_height;
     uint32_t metadata_size;
     uint32_t checksum;                // CRC32 of preceding fields
 } udx_db_header;
@@ -273,11 +273,11 @@ static inline void udx_db_header_serialize(const udx_db_header *h, uint8_t buf[U
     p += 8;
     memcpy(p, &h->index_first_leaf_offset, 8);
     p += 8;
+    memcpy(p, &h->index_bptree_height, 4);
+    p += 4;
     memcpy(p, &h->entry_count, 4);
     p += 4;
     memcpy(p, &h->item_count, 4);
-    p += 4;
-    memcpy(p, &h->index_bptree_height, 4);
     p += 4;
     memcpy(p, &h->metadata_size, 4);
     p += 4;
@@ -293,11 +293,11 @@ static inline void udx_db_header_deserialize(const uint8_t buf[UDX_DB_HEADER_SER
     p += 8;
     memcpy(&h->index_first_leaf_offset, p, 8);
     p += 8;
+    memcpy(&h->index_bptree_height, p, 4);
+    p += 4;
     memcpy(&h->entry_count, p, 4);
     p += 4;
     memcpy(&h->item_count, p, 4);
-    p += 4;
-    memcpy(&h->index_bptree_height, p, 4);
     p += 4;
     memcpy(&h->metadata_size, p, 4);
     p += 4;
