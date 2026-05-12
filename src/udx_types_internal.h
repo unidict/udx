@@ -222,6 +222,8 @@ typedef struct {
 #define UDX_HEADER_DB_COUNT_POS                  6
 #define UDX_HEADER_DB_TABLE_OFFSET_POS          8
 
+// chunk_count is stored in chunk table data header (not here) so that
+// the chunk table can be parsed self-contained without external parameters.
 typedef struct {
     uint64_t chunk_table_offset;
     uint64_t index_root_offset;
