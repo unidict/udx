@@ -617,7 +617,7 @@ udx_status udx_db_key_entry_lookup(udx_db *db, const char *key, udx_db_key_entry
         current_node = read_index_node(db, child_offset);
         if (current_node == NULL) {
             free(folded_key);
-            return UDX_ERR_IO;
+            return UDX_ERR_FORMAT;
         }
     }
 
@@ -662,7 +662,7 @@ udx_status udx_db_key_entry_prefix_match(udx_db *db, const char *prefix,
         current_node = read_index_node(db, child_offset);
         if (current_node == NULL) {
             free(key);
-            return UDX_ERR_IO;
+            return UDX_ERR_FORMAT;
         }
     }
 
@@ -717,7 +717,7 @@ udx_status udx_db_key_entry_prefix_match(udx_db *db, const char *prefix,
                 if (!is_root) free_node(current_node);
                 udx_db_key_entry_array_free(result);
                 free(key);
-                return UDX_ERR_IO;
+                return UDX_ERR_FORMAT;
             }
 
             udx_db_key_entry_array_push(result, *entry);
@@ -815,7 +815,7 @@ udx_status udx_db_value_entry_load(udx_db *db, const udx_db_key_entry *key_entry
         if (item.data == NULL) {
             free(item.original_key);
             udx_db_value_entry_free(value_entry);
-            return UDX_ERR_IO;
+            return UDX_ERR_FORMAT;
         }
 
         value_entry->items.elements[i] = item;
@@ -1113,7 +1113,7 @@ udx_status udx_db_iter_next(udx_db_iter *iter, const udx_db_key_entry **out_entr
                                            &key_entry);
 
             if (entry_size == 0 || key_entry == NULL) {
-                return UDX_ERR_IO;
+                return UDX_ERR_FORMAT;
             }
 
             iter->current_ptr += entry_size;
@@ -1134,7 +1134,7 @@ udx_status udx_db_iter_next(udx_db_iter *iter, const udx_db_key_entry **out_entr
 
         udx_index_node *new_leaf = read_index_node(iter->db, iter->next_leaf_offset);
         if (new_leaf == NULL) {
-            return UDX_ERR_IO;
+            return UDX_ERR_FORMAT;
         }
 
         uint64_t next_leaf;

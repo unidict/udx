@@ -85,7 +85,7 @@ udx_db_builder *udx_db_builder_create_with_metadata(udx_writer *writer,
  *         UDX_ERR_INVALID_PARAM: invalid parameter or empty database (no entries added)
  *         UDX_ERR_INTERNAL: chunk writer failed
  *         UDX_ERR_INTERNAL: B+ tree build failed
- *         UDX_ERR_HEADER: header write failed
+ *         UDX_ERR_IO: header write failed
  *
  * @note After this call, the builder is freed and must not be used again
  * @note Empty databases (with no entries) are not allowed and will return UDX_ERR_INVALID_PARAM

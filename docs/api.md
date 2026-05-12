@@ -212,7 +212,7 @@ Finish building the database.
 - `UDX_OK` on success, error code on failure:
   - `UDX_ERR_INVALID_PARAM`: invalid parameter or empty database (no entries added)
   - `UDX_ERR_INTERNAL`: chunk writer or B+ tree build failed
-  - `UDX_ERR_HEADER`: header write failed
+  - `UDX_ERR_IO`: header write failed
 
 **Notes:**
 - After this call, the builder is freed and must not be used again

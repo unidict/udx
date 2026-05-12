@@ -23,15 +23,22 @@ extern "C" {
 // ============================================================
 
 typedef enum {
+    // Success
     UDX_OK                      = 0,
     UDX_NOT_FOUND               = 1,
+
+    // Caller errors
     UDX_ERR_INVALID_PARAM       = -1,
-    UDX_ERR_IO                  = -2,
-    UDX_ERR_HEADER              = -3,
-    UDX_ERR_INTERNAL            = -4,
-    UDX_ERR_STATE               = -5,
+    UDX_ERR_STATE               = -2,
+
+    // System errors
+    UDX_ERR_MEMORY              = -3,
+    UDX_ERR_IO                  = -4,
+
+    // Data errors
+    UDX_ERR_FORMAT              = -5,
     UDX_ERR_OVERFLOW            = -6,
-    UDX_ERR_MEMORY              = -7
+    UDX_ERR_INTERNAL            = -7
 } udx_status;
 
 // ============================================================

@@ -634,19 +634,19 @@ udx_status udx_db_builder_finalize(udx_db_builder *builder) {
     // 4. Write header back to reserved position
     int64_t current_pos = udx_ftell(writer->file);
     if (current_pos < 0) {
-        result = UDX_ERR_HEADER;
+        result = UDX_ERR_IO;
         goto cleanup;
     }
     if (udx_fseek(writer->file, builder->db_offset, SEEK_SET) != 0) {
-        result = UDX_ERR_HEADER;
+        result = UDX_ERR_IO;
         goto cleanup;
     }
     if (fwrite(db_header_buf, UDX_DB_HEADER_SERIALIZED_SIZE, 1, writer->file) != 1) {
-        result = UDX_ERR_HEADER;
+        result = UDX_ERR_IO;
         goto cleanup;
     }
     if (udx_fseek(writer->file, current_pos, SEEK_SET) != 0) {
-        result = UDX_ERR_HEADER;
+        result = UDX_ERR_IO;
         goto cleanup;
     }
 
