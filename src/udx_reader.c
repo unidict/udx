@@ -730,10 +730,6 @@ udx_status udx_db_key_entry_prefix_match(udx_db *db, const char *prefix,
             current += entry_size;
         }
 
-        if (current < node_end) {
-            goto cleanup;
-        }
-
         if (next_leaf == 0) break;
         if (limit > 0 && result->count >= limit) break;
 
@@ -953,6 +949,11 @@ udx_reader *udx_reader_open(const char *path) {
 
     // Get db_count from header
     uint16_t db_count = reader->header.db_count;
+    if (db_count == 0) {
+        fclose(reader->file);
+        free(reader);
+        return NULL;
+    }
 
     // Allocate arrays
     uint64_t *offsets = (uint64_t *)malloc(sizeof(uint64_t) * db_count);
