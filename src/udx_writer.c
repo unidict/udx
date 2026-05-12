@@ -482,16 +482,13 @@ udx_db_builder *udx_db_builder_create(udx_writer *writer, const char *name) {
 udx_db_builder *udx_db_builder_create_with_metadata(udx_writer *writer,
                                                     const char *name,
                                                     const uint8_t *metadata,
-                                                    size_t metadata_size) {
+                                                    uint32_t metadata_size) {
     if (writer == NULL || name == NULL) {
         return NULL;
     }
 
     // Validate metadata parameters
     if (metadata == NULL && metadata_size > 0) {
-        return NULL;
-    }
-    if (metadata_size > UINT32_MAX) {
         return NULL;
     }
 
@@ -542,7 +539,7 @@ udx_db_builder *udx_db_builder_create_with_metadata(udx_writer *writer,
 
     // Write metadata immediately after header (if provided)
     if (metadata != NULL && metadata_size > 0) {
-        db_builder->metadata_size = (uint32_t)metadata_size;
+        db_builder->metadata_size = metadata_size;
 
         if (fwrite(metadata, 1, metadata_size, writer->file) != metadata_size) {
             goto error;

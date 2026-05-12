@@ -76,7 +76,7 @@ udx_db_builder *udx_db_builder_create(udx_writer *writer, const char *name);
 udx_db_builder *udx_db_builder_create_with_metadata(udx_writer *writer,
                                                     const char *name,
                                                     const uint8_t *metadata,
-                                                    size_t metadata_size);
+                                                    uint32_t metadata_size);
 
 /**
  * Finalize building the database

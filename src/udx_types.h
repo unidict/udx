@@ -59,7 +59,7 @@ typedef struct {
 typedef struct {
     char *original_key;
     uint8_t *data;
-    size_t size;
+    uint32_t size;
 } udx_value_entry_item;
 
 // ============================================================

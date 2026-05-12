@@ -90,7 +90,7 @@ Create a database builder (without metadata).
 udx_db_builder *udx_db_builder_create_with_metadata(udx_writer *writer,
                                                     const char *name,
                                                     const uint8_t *metadata,
-                                                    size_t metadata_size);
+                                                    uint32_t metadata_size);
 ```
 
 Create a database builder with metadata.
