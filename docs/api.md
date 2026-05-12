@@ -368,19 +368,19 @@ Get the metadata.
 
 ---
 
-#### `udx_db_get_key_count()`
+#### `udx_db_get_entry_count()`
 
 ```c
-uint32_t udx_db_get_key_count(const udx_db *db);
+uint32_t udx_db_get_entry_count(const udx_db *db);
 ```
 
-Get the number of unique keys in the database.
+Get the number of entries in the database.
 
 **Parameters:**
 - `db` - Database pointer
 
 **Return:**
-- Number of unique keys in the database
+- Number of entries in the database
 
 ---
 

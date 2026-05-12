@@ -884,7 +884,7 @@ const uint8_t *udx_db_get_metadata(const udx_db *db, uint32_t *out_size) {
     return db->metadata;
 }
 
-uint32_t udx_db_get_key_count(const udx_db *db) {
+uint32_t udx_db_get_entry_count(const udx_db *db) {
     return db ? db->header.entry_count : 0;
 }
 
