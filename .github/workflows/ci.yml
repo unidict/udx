@@ -36,4 +36,4 @@ jobs:
         run: cmake --build build --config Release
 
       - name: Test
-        run: ctest --test-dir build --verbose ${{ runner.os == 'Windows' && '-C Release' || '' }}
+        run: ctest --test-dir build --verbose --output-on-failure ${{ runner.os == 'Windows' && '-C Release' || '' }}
