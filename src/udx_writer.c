@@ -659,8 +659,9 @@ cleanup:
     if (result != 0) {
         // Rollback: remove the offset/name pushed during create
         if (writer->db_names.count > 0) {
-            free(writer->db_names.elements[writer->db_names.count - 1]);
             writer->db_names.count--;
+            free(writer->db_names.elements[writer->db_names.count]);
+            writer->db_names.elements[writer->db_names.count] = NULL;
         }
         if (writer->db_offsets.count > 0) {
             writer->db_offsets.count--;
@@ -680,7 +681,7 @@ udx_status udx_db_builder_add_entry(udx_db_builder *builder,
                            const char *key,
                            const uint8_t *value,
                            uint32_t value_size) {
-    if (builder == NULL || key == NULL || value == NULL) {
+    if (builder == NULL || key == NULL || value == NULL || value_size == 0) {
         return UDX_ERR_INVALID_PARAM;
     }
 
@@ -693,7 +694,7 @@ udx_status udx_db_builder_add_entry(udx_db_builder *builder,
 udx_value_address udx_db_builder_add_value(udx_db_builder *builder,
                                                   const uint8_t *value,
                                                   uint32_t value_size) {
-    if (builder == NULL || value == NULL) {
+    if (builder == NULL || value == NULL || value_size == 0) {
         return UDX_INVALID_ADDRESS;
     }
 
