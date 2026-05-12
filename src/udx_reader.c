@@ -320,7 +320,6 @@ static size_t parse_entry(const uint8_t *data, size_t available, udx_db_key_entr
         return 0;
     }
 
-    udx_db_key_entry_item_array_init(&entry->items);
     if (item_count > 0) {
         if (!udx_db_key_entry_item_array_reserve(&entry->items, item_count)) {
             free(entry->key);
@@ -799,8 +798,6 @@ udx_status udx_db_value_entry_load(udx_db *db, const udx_db_key_entry *key_entry
         return UDX_ERR_MEMORY;
     }
 
-    udx_db_value_entry_item_array_init(&value_entry->items);
-
     if (!udx_db_value_entry_item_array_reserve(&value_entry->items, key_entry->items.count)) {
         udx_db_value_entry_free(value_entry);
         return UDX_ERR_MEMORY;
@@ -1094,7 +1091,7 @@ udx_db_iter *udx_db_iter_create(udx_db *db) {
 void udx_db_iter_destroy(udx_db_iter *iter) {
     if (iter == NULL) return;
 
-    udx_db_key_entry_free_contents(&iter->current_entry);
+    udx_db_key_entry_cleanup(&iter->current_entry);
     free_node(iter->leaf_node);
     free(iter);
 }
@@ -1104,7 +1101,7 @@ udx_status udx_db_iter_next(udx_db_iter *iter, const udx_db_key_entry **out_entr
     *out_entry = NULL;
 
     // Free previous entry
-    udx_db_key_entry_free_contents(&iter->current_entry);
+    udx_db_key_entry_cleanup(&iter->current_entry);
 
     // Traverse until we find the next entry
     while (true) {

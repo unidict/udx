@@ -38,14 +38,14 @@ typedef enum {
 // Basic Types
 // ============================================================
 
-// Value address: 48-bit chunk_index + 16-bit offset in chunk
+// Value address: 32-bit chunk_index + 16-bit offset in chunk
 typedef uint64_t udx_value_address;
 
 // Invalid address sentinel (returned by udx_db_builder_add_value on failure)
 #define UDX_INVALID_ADDRESS      UINT64_MAX
 
 // ============================================================
-// Item Types
+// Entry Item
 // ============================================================
 
 // Key entry item (one original_key + address + size)
@@ -63,7 +63,7 @@ typedef struct {
 } udx_value_entry_item;
 
 // ============================================================
-// Item Arrays
+// Entry Item Array
 // ============================================================
 
 typedef struct {
@@ -78,24 +78,8 @@ typedef struct {
     size_t capacity;
 } udx_db_value_entry_item_array;
 
-static inline void udx_db_key_entry_item_array_free(udx_db_key_entry_item_array *arr) {
-    if (arr == NULL) return;
-    free(arr->elements);
-    arr->elements = NULL;
-    arr->count = 0;
-    arr->capacity = 0;
-}
-
-static inline void udx_db_value_entry_item_array_free(udx_db_value_entry_item_array *arr) {
-    if (arr == NULL) return;
-    free(arr->elements);
-    arr->elements = NULL;
-    arr->count = 0;
-    arr->capacity = 0;
-}
-
 // ============================================================
-// Entry Types
+// Entry
 // ============================================================
 
 /**
@@ -116,19 +100,11 @@ typedef struct {
     udx_db_value_entry_item_array items;
 } udx_db_value_entry;
 
-// ============================================================
-// Entry Operations
-// ============================================================
-
-// Free internal fields only (entry is stack-allocated or embedded)
-void udx_db_key_entry_free_contents(udx_db_key_entry *entry);
-
-// Free internal fields AND the entry itself (entry was heap-allocated)
 void udx_db_key_entry_free(udx_db_key_entry *entry);
 void udx_db_value_entry_free(udx_db_value_entry *entry);
 
 // ============================================================
-// Entry Array
+// Key Entry Array
 // ============================================================
 
 typedef struct {
@@ -137,14 +113,7 @@ typedef struct {
     size_t capacity;
 } udx_db_key_entry_array;
 
-static inline void udx_db_key_entry_array_free(udx_db_key_entry_array *arr) {
-    if (arr == NULL) return;
-    for (size_t i = 0; i < arr->count; i++) {
-        udx_db_key_entry_free_contents(&arr->elements[i]);
-    }
-    free(arr->elements);
-    free(arr);
-}
+void udx_db_key_entry_array_free(udx_db_key_entry_array *arr);
 
 #ifdef __cplusplus
 }

@@ -41,7 +41,7 @@ static int entry_compare(const void *a, const void *b, void *udata) {
 static void entry_free_callback(const void *item, void *udata) {
     (void)udata;
     udx_db_key_entry *entry = (udx_db_key_entry *)item;
-    udx_db_key_entry_free_contents(entry);
+    udx_db_key_entry_cleanup(entry);
 }
 
 // ============================================================
@@ -122,9 +122,8 @@ bool udx_keys_add(udx_keys *keys,
     } else {
         // Does not exist, create new entry on stack
         // btree_set will memcpy (shallow copy) the struct into internal storage
-        udx_db_key_entry new_entry;
+        udx_db_key_entry new_entry = {0};
         new_entry.key = folded;  // ownership transferred to btree on success
-        udx_db_key_entry_item_array_init(&new_entry.items);
 
         // Create first item with original key
         udx_key_entry_item item;
@@ -146,7 +145,7 @@ bool udx_keys_add(udx_keys *keys,
 
         if (udx_btree_oom(keys->tree)) {
             // btree did not take ownership, clean up everything
-            udx_db_key_entry_free_contents(&new_entry);
+            udx_db_key_entry_cleanup(&new_entry);
             return false;
         }
         // Success: btree now owns the pointers (key, items.data)
