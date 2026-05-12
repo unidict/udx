@@ -175,14 +175,14 @@ int main() {
         return 1;
     }
 
-    // Look up a word
-    udx_db_entry *entry = udx_db_lookup(db, "hello");
-    if (entry) {
-        printf("Found: %s\n", entry->word);
-        for (size_t i = 0; i < entry->items.size; i++) {
-            printf("  Data[%zu]: %zu bytes\n", i, entry->items.data[i].size);
+    // Look up a word (with data loaded)
+    udx_db_value_entry *entry = NULL;
+    if (udx_db_value_entry_lookup(db, "hello", &entry) == UDX_OK) {
+        printf("Found: %s\n", entry->key);
+        for (size_t i = 0; i < entry->items.count; i++) {
+            printf("  Data[%zu]: %zu bytes\n", i, entry->items.elements[i].size);
         }
-        udx_db_entry_free(entry);
+        udx_db_value_entry_free(entry);
     }
 
     // Cleanup
@@ -196,26 +196,25 @@ int main() {
 
 ```c
 // Find all words starting with "hel"
-udx_index_entry_array results = udx_db_index_prefix_match(db, "hel", 100);
-
-for (size_t i = 0; i < results.size; i++) {
-    printf("Word: %s (%zu items)\n",
-           results.data[i].word,
-           results.data[i].items.size);
+udx_db_key_entry_array *results = NULL;
+if (udx_db_key_entry_prefix_match(db, "hel", 100, &results) == UDX_OK) {
+    for (size_t i = 0; i < results->count; i++) {
+        printf("Word: %s (%zu items)\n",
+               results->elements[i].key,
+               results->elements[i].items.count);
+    }
+    udx_db_key_entry_array_free(results);
 }
-
-// Free results
-udx_index_entry_array_free_contents(&results);
 ```
 
 ### Iteration
 
 ```c
 udx_db_iter *iter = udx_db_iter_create(db);
-const udx_db_entry *entry;
+const udx_db_key_entry *entry;
 
-while ((entry = udx_db_iter_next(iter)) != NULL) {
-    printf("%s\n", entry->word);
+while (udx_db_iter_next(iter, &entry) == UDX_OK) {
+    printf("%s\n", entry->key);
 }
 
 udx_db_iter_destroy(iter);

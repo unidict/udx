@@ -10,8 +10,8 @@ This document describes the complete API reference for udx.
 - [Reader APIs](#reader-apis)
   - [Reader Functions](#reader-functions)
   - [Database Functions](#database-functions)
-  - [Index Lookup](#index-lookup)
-  - [Full Data Lookup](#full-data-lookup)
+  - [Key Entry Lookup](#key-entry-lookup)
+  - [Value Entry Lookup](#value-entry-lookup)
   - [Iterator](#iterator)
 - [Data Types](#data-types)
 
@@ -44,7 +44,7 @@ Open a new UDX file for writing.
 #### `udx_writer_close()`
 
 ```c
-udx_error_t udx_writer_close(udx_writer *writer);
+udx_status udx_writer_close(udx_writer *writer);
 ```
 
 Close the writer and finalize the UDX file.
@@ -54,7 +54,7 @@ Close the writer and finalize the UDX file.
 
 **Return:**
 - `UDX_OK` on success, error code on failure:
-  - `UDX_ERR_ACTIVE_DB`: a database builder is still active
+  - `UDX_ERR_STATE`: a database builder is still active
   - `UDX_ERR_IO`: file I/O error
 
 **Notes:**
@@ -77,7 +77,7 @@ Create a database builder (without metadata).
 - `name` - Database name (must be unique within the file)
 
 **Return:**
-- Builder pointer, or `NULL` on failure (`UDX_ERR_MEMORY`, `UDX_ERR_ACTIVE_DB`, `UDX_ERR_DUPLICATE_NAME`)
+- Builder pointer, or `NULL` on failure (`UDX_ERR_MEMORY`, `UDX_ERR_STATE`)
 
 **Notes:**
 - This is equivalent to calling `udx_db_builder_create_with_metadata` with `metadata=NULL` and `metadata_size=0`
@@ -102,7 +102,7 @@ Create a database builder with metadata.
 - `metadata_size` - Size of metadata in bytes (must be 0 if `metadata` is `NULL`)
 
 **Return:**
-- Builder pointer, or `NULL` on failure (`UDX_ERR_MEMORY`, `UDX_ERR_ACTIVE_DB`, `UDX_ERR_DUPLICATE_NAME`, `UDX_ERR_METADATA`)
+- Builder pointer, or `NULL` on failure (`UDX_ERR_MEMORY`, `UDX_ERR_STATE`)
 
 **Constraints:**
 - If `metadata` is `NULL`, `metadata_size` MUST be 0
@@ -117,36 +117,90 @@ Create a database builder with metadata.
 #### `udx_db_builder_add_entry()`
 
 ```c
-udx_error_t udx_db_builder_add_entry(udx_db_builder *builder,
+udx_status udx_db_builder_add_entry(udx_db_builder *builder,
                                      const char *key,
-                                     const uint8_t *data,
-                                     size_t data_size);
+                                     const uint8_t *value,
+                                     uint32_t value_size);
 ```
 
-Add an entry to the database.
+Add an entry to the database (simple one-key-to-one-value mapping).
 
 **Parameters:**
 - `builder` - Builder pointer
 - `key` - Key string (UTF-8, will be folded for case-insensitive lookup)
-- `data` - Data bytes
-- `data_size` - Size of data in bytes (must not exceed `UINT32_MAX`)
+- `value` - Value bytes
+- `value_size` - Size of value in bytes
 
 **Return:**
 - `UDX_OK` on success, error code on failure:
   - `UDX_ERR_INVALID_PARAM`: invalid parameter
-  - `UDX_ERR_CHUNK`: chunk writer failed
-  - `UDX_ERR_KEYS`: keys container failed
+  - `UDX_ERR_INTERNAL`: chunk writer or keys container failed
 
 **Notes:**
 - Multiple entries can be added under the same key
 - The original key case is preserved
+- For cases where multiple keys reference the same data, use `udx_db_builder_add_value()` + `udx_db_builder_add_key_entry()` instead
+
+---
+
+#### `udx_db_builder_add_value()`
+
+```c
+udx_value_address udx_db_builder_add_value(udx_db_builder *builder,
+                                            const uint8_t *value,
+                                            uint32_t value_size);
+```
+
+Store value in chunk storage (returns address for key entries).
+
+**Parameters:**
+- `builder` - Builder pointer
+- `value` - Value bytes
+- `value_size` - Size of value in bytes
+
+**Return:**
+- Value address on success, `UDX_INVALID_ADDRESS` on failure
+
+**Notes:**
+- This function only writes data to chunk storage
+- Use `udx_db_builder_add_key_entry()` to add key references to this address
+- Multiple keys can reference the same address (for alternates)
+
+---
+
+#### `udx_db_builder_add_key_entry()`
+
+```c
+udx_status udx_db_builder_add_key_entry(udx_db_builder *builder,
+                                         const char *key,
+                                         udx_value_address value_address,
+                                         uint32_t value_size);
+```
+
+Add key entry referencing stored value.
+
+**Parameters:**
+- `builder` - Builder pointer
+- `key` - Key string (UTF-8, will be folded for case-insensitive lookup)
+- `value_address` - Address of data in chunk storage (from `udx_db_builder_add_value`)
+- `value_size` - Size of value in bytes
+
+**Return:**
+- `UDX_OK` on success, error code on failure:
+  - `UDX_ERR_INVALID_PARAM`: invalid parameter
+  - `UDX_ERR_INTERNAL`: keys container failed
+
+**Notes:**
+- This function only adds key-to-address mapping to index
+- Use `udx_db_builder_add_value()` first to store data
+- Multiple keys can reference the same `value_address`
 
 ---
 
 #### `udx_db_builder_finalize()`
 
 ```c
-udx_error_t udx_db_builder_finalize(udx_db_builder *builder);
+udx_status udx_db_builder_finalize(udx_db_builder *builder);
 ```
 
 Finish building the database.
@@ -157,8 +211,7 @@ Finish building the database.
 **Return:**
 - `UDX_OK` on success, error code on failure:
   - `UDX_ERR_INVALID_PARAM`: invalid parameter or empty database (no entries added)
-  - `UDX_ERR_CHUNK`: chunk writer failed
-  - `UDX_ERR_BPTREE`: B+ tree build failed
+  - `UDX_ERR_INTERNAL`: chunk writer or B+ tree build failed
   - `UDX_ERR_HEADER`: header write failed
 
 **Notes:**
@@ -347,30 +400,14 @@ Get the total number of items across all keys.
 
 ---
 
-#### `udx_db_get_index_bptree_height()`
+### Key Entry Lookup
 
-```c
-uint32_t udx_db_get_index_bptree_height(const udx_db *db);
-```
-
-Get the B+ tree height.
-
-**Parameters:**
-- `db` - Database pointer
-
-**Return:**
-- B+ tree height (for debugging/analysis)
-
----
-
-### Index Lookup
-
-Index lookup functions return entries with addresses only, without loading the actual data. This is faster when you only need to check existence or get metadata.
+Key entry lookup functions return entries with addresses only, without loading the actual data. This is faster when you only need to check existence or get metadata.
 
 #### `udx_db_key_entry_lookup()`
 
 ```c
-udx_db_key_entry *udx_db_key_entry_lookup(udx_db *db, const char *key);
+udx_status udx_db_key_entry_lookup(udx_db *db, const char *key, udx_db_key_entry **out_entry);
 ```
 
 Look up a single key in database (index only, no data loaded).
@@ -378,20 +415,21 @@ Look up a single key in database (index only, no data loaded).
 **Parameters:**
 - `db` - Database pointer
 - `key` - Key to look up
+- `out_entry` - Output: key entry (caller must free with `udx_db_key_entry_free`)
 
 **Return:**
-- Index entry pointer (caller must free with `udx_key_entry_free`), or `NULL` if not found
+- `UDX_OK` on success, `UDX_NOT_FOUND` if key not found, `UDX_ERR_*` on error
 
 **Notes:**
-- This is faster than `udx_db_lookup` as it doesn't load data
-- Use `udx_db_lookup_by_key_entry()` to load data for specific items
+- This is faster than `udx_db_value_entry_lookup()` as it doesn't load data
+- Use `udx_db_value_entry_load()` to load data for specific key entries
 
 ---
 
 #### `udx_db_key_entry_prefix_match()`
 
 ```c
-udx_db_key_entry_array udx_db_key_entry_prefix_match(udx_db *db, const char *prefix, size_t limit);
+udx_status udx_db_key_entry_prefix_match(udx_db *db, const char *prefix, size_t limit, udx_db_key_entry_array **out_entries);
 ```
 
 Prefix match in database (index only, no data loaded).
@@ -400,24 +438,25 @@ Prefix match in database (index only, no data loaded).
 - `db` - Database pointer
 - `prefix` - Prefix to match
 - `limit` - Maximum number of results (0 = unlimited)
+- `out_entries` - Output: array of key entries (caller must free with `udx_db_key_entry_array_free`)
 
 **Return:**
-- Array of index entries (caller must free with `udx_db_key_entry_array_free_contents`)
+- `UDX_OK` on success, `UDX_NOT_FOUND` if no matches, `UDX_ERR_*` on error
 
 **Notes:**
 - This is useful for autocomplete/suggestion features
-- Returns entries with addresses only, use `udx_db_lookup_by_key_entry()` to load data
+- Returns entries with addresses only, use `udx_db_value_entry_load()` to load data
 
 ---
 
-### Full Data Lookup
+### Value Entry Lookup
 
-Full data lookup functions return entries with all data loaded.
+Value entry lookup functions return entries with all data loaded.
 
-#### `udx_db_lookup()`
+#### `udx_db_value_entry_lookup()`
 
 ```c
-udx_db_value_entry *udx_db_lookup(udx_db *db, const char *key);
+udx_status udx_db_value_entry_lookup(udx_db *db, const char *key, udx_db_value_entry **out_entry);
 ```
 
 Look up a single key in database (with data loaded).
@@ -425,26 +464,28 @@ Look up a single key in database (with data loaded).
 **Parameters:**
 - `db` - Database pointer
 - `key` - Key to look up
+- `out_entry` - Output: value entry (caller must free with `udx_db_value_entry_free`)
 
 **Return:**
-- Database entry pointer (caller must free with `udx_value_entry_free`), or `NULL` if not found
+- `UDX_OK` on success, `UDX_NOT_FOUND` if key not found, `UDX_ERR_*` on error
 
 ---
 
-#### `udx_db_lookup_by_key_entry()`
+#### `udx_db_value_entry_load()`
 
 ```c
-udx_db_value_entry *udx_db_lookup_by_key_entry(udx_db *db, const udx_db_key_entry *key_entry);
+udx_status udx_db_value_entry_load(udx_db *db, const udx_db_key_entry *key_entry, udx_db_value_entry **out_entry);
 ```
 
-Look up by key entry (with data loaded).
+Load data for all items in a key entry.
 
 **Parameters:**
 - `db` - Database pointer
-- `key_entry` - Key entry (with addresses) returned from index lookup
+- `key_entry` - Key entry (with addresses) returned from key entry lookup
+- `out_entry` - Output: value entry (caller must free with `udx_db_value_entry_free`)
 
 **Return:**
-- Database entry with data loaded (caller must free with `udx_value_entry_free`), or `NULL` on error
+- `UDX_OK` on success, `UDX_NOT_FOUND` if key not found, `UDX_ERR_*` on error
 
 **Notes:**
 - This function loads data for all items in the key entry
@@ -496,16 +537,17 @@ Destroy an iterator.
 #### `udx_db_iter_next()`
 
 ```c
-const udx_db_value_entry *udx_db_iter_next(udx_db_iter *iter);
+udx_status udx_db_iter_next(udx_db_iter *iter, const udx_db_key_entry **out_entry);
 ```
 
-Get the next entry.
+Get the next key entry from the iterator.
 
 **Parameters:**
 - `iter` - Iterator pointer
+- `out_entry` - Output: pointer to internal entry (valid until next call or destroy)
 
 **Return:**
-- Database entry pointer, or `NULL` when traversal is complete
+- `UDX_OK` on success, `UDX_NOT_FOUND` if no more entries, `UDX_ERR_*` on error
 
 **Notes:**
 - The returned pointer points to internal memory managed by the iterator
@@ -519,12 +561,12 @@ Get the next entry.
 
 See `udx_types.h` for the complete definition of data types used in the API, including:
 
-- `udx_db_key_entry` - Index entry with addresses (no data)
-- `udx_db_value_entry` - Database entry with data loaded
-- `udx_db_key_entry_array` - Array of index entries
-- `udx_value_address_t` - Address encoding (chunk index + offset)
+- `udx_db_key_entry` - Key entry with addresses (no data)
+- `udx_db_value_entry` - Value entry with data loaded
+- `udx_db_key_entry_array` - Array of key entries
+- `udx_value_address` - Address encoding (chunk index + offset)
 
 Memory management functions:
-- `udx_key_entry_free()` - Free an index entry
-- `udx_value_entry_free()` - Free a database entry
-- `udx_db_key_entry_array_free_contents()` - Free array contents
+- `udx_db_key_entry_free()` - Free a key entry
+- `udx_db_value_entry_free()` - Free a value entry
+- `udx_db_key_entry_array_free()` - Free a key entry array

@@ -383,9 +383,7 @@ udx_writer *udx_writer_open(const char *output_path) {
         return NULL;
     }
 
-    // Initialize arrays (calloc zeroed memory, has_db_active already false)
-    udx_uint64_array_init(&writer->db_offsets);
-    udx_string_array_init(&writer->db_names);
+    // Arrays zeroed by calloc, has_db_active already false
 
     // Write main file header at the beginning of the file
     udx_header main_header = {0};
@@ -470,9 +468,6 @@ udx_status udx_writer_close(udx_writer *writer) {
 cleanup:
     if (writer->file) fclose(writer->file);
 
-    for (size_t i = 0; i < writer->db_names.count; i++) {
-        free(writer->db_names.elements[i]);
-    }
     udx_string_array_free(&writer->db_names);
     udx_uint64_array_free(&writer->db_offsets);
     free(writer);

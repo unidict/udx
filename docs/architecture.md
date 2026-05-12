@@ -18,7 +18,7 @@ udx/
     ├── udx_reader.h/c    # High-level reader API
     ├── udx_chunk.h/c     # Chunk-based storage with compression
     ├── udx_keys.h/c     # Ordered key container (B-tree wrapper for building)
-    ├── udx_types.h/c     # Core data types and serialization
+    ├── udx_types.h/c     # Core data types (public + internal: udx_types_internal.h)
     ├── udx_utils.h/c     # Utility functions (string folding, I/O)
     └── udx_btree.h/c     # B-tree implementation (Joshua J Baker)
 ```
@@ -44,7 +44,7 @@ graph TB
     subgraph Core["Core Modules"]
         Chunk["udx_chunk.h/c<br/>Chunk Storage<br/>(Compression)"]
         Keys["udx_keys.h/c<br/>Keys Container<br/>(B-tree Wrapper)"]
-        Types["udx_types.h/c<br/>Core Data Types<br/>& Serialization"]
+        Types["udx_types.h/c<br/>Core Data Types<br/>(udx_types_internal.h)"]
     end
 
     subgraph Util["Utility Modules"]

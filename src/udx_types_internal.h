@@ -48,12 +48,6 @@ typedef struct {
     size_t capacity;
 } udx_uint64_array;
 
-static inline void udx_uint64_array_init(udx_uint64_array *arr) {
-    arr->elements = NULL;
-    arr->count = 0;
-    arr->capacity = 0;
-}
-
 static inline bool udx_uint64_array_push(udx_uint64_array *arr, uint64_t val) {
     if (arr == NULL) return false;
     if (arr->count >= arr->capacity) {
@@ -82,12 +76,6 @@ typedef struct {
     size_t capacity;
 } udx_string_array;
 
-static inline void udx_string_array_init(udx_string_array *arr) {
-    arr->elements = NULL;
-    arr->count = 0;
-    arr->capacity = 0;
-}
-
 static inline bool udx_string_array_push(udx_string_array *arr, char *val) {
     if (arr == NULL) return false;
     if (arr->count >= arr->capacity) {
@@ -103,6 +91,9 @@ static inline bool udx_string_array_push(udx_string_array *arr, char *val) {
 
 static inline void udx_string_array_free(udx_string_array *arr) {
     if (arr == NULL) return;
+    for (size_t i = 0; i < arr->count; i++) {
+        free(arr->elements[i]);
+    }
     free(arr->elements);
     arr->elements = NULL;
     arr->count = 0;
@@ -125,16 +116,19 @@ typedef struct {
 } udx_index_node;
 
 // ============================================================
+// Entry Cleanup (internal use only)
+// ============================================================
+
+// Free internal fields only (entry is stack-allocated or embedded)
+void udx_db_key_entry_cleanup(udx_db_key_entry *entry);
+
+// ============================================================
 // Item Array Builders (internal use only)
 // ============================================================
 
 // ---- udx_db_key_entry_item_array ----
 
-static inline void udx_db_key_entry_item_array_init(udx_db_key_entry_item_array *arr) {
-    arr->elements = NULL;
-    arr->count = 0;
-    arr->capacity = 0;
-}
+void udx_db_key_entry_item_array_cleanup(udx_db_key_entry_item_array *arr);
 
 static inline bool udx_db_key_entry_item_array_push(udx_db_key_entry_item_array *arr, udx_key_entry_item val) {
     if (arr == NULL) return false;
@@ -159,44 +153,7 @@ static inline bool udx_db_key_entry_item_array_reserve(udx_db_key_entry_item_arr
     return true;
 }
 
-// ---- udx_db_value_entry_item_array ----
-
-static inline void udx_db_value_entry_item_array_init(udx_db_value_entry_item_array *arr) {
-    arr->elements = NULL;
-    arr->count = 0;
-    arr->capacity = 0;
-}
-
-static inline bool udx_db_value_entry_item_array_push(udx_db_value_entry_item_array *arr, udx_value_entry_item val) {
-    if (arr == NULL) return false;
-    if (arr->count >= arr->capacity) {
-        size_t new_cap = arr->capacity == 0 ? 8 : arr->capacity * 2;
-        udx_value_entry_item *new_data = (udx_value_entry_item *)realloc(arr->elements, new_cap * sizeof(udx_value_entry_item));
-        if (new_data == NULL) return false;
-        arr->elements = new_data;
-        arr->capacity = new_cap;
-    }
-    arr->elements[arr->count++] = val;
-    return true;
-}
-
-static inline bool udx_db_value_entry_item_array_reserve(udx_db_value_entry_item_array *arr, size_t new_cap) {
-    if (arr == NULL) return false;
-    if (new_cap <= arr->capacity) return true;
-    udx_value_entry_item *new_data = (udx_value_entry_item *)realloc(arr->elements, new_cap * sizeof(udx_value_entry_item));
-    if (new_data == NULL) return false;
-    arr->elements = new_data;
-    arr->capacity = new_cap;
-    return true;
-}
-
 // ---- udx_db_key_entry_array ----
-
-static inline void udx_db_key_entry_array_init(udx_db_key_entry_array *arr) {
-    arr->elements = NULL;
-    arr->count = 0;
-    arr->capacity = 0;
-}
 
 static inline bool udx_db_key_entry_array_reserve(udx_db_key_entry_array *arr, size_t new_cap) {
     if (arr == NULL) return false;
@@ -218,6 +175,33 @@ static inline bool udx_db_key_entry_array_push(udx_db_key_entry_array *arr, udx_
         arr->capacity = new_cap;
     }
     arr->elements[arr->count++] = val;
+    return true;
+}
+
+// ---- udx_db_value_entry_item_array ----
+
+void udx_db_value_entry_item_array_cleanup(udx_db_value_entry_item_array *arr);
+
+static inline bool udx_db_value_entry_item_array_push(udx_db_value_entry_item_array *arr, udx_value_entry_item val) {
+    if (arr == NULL) return false;
+    if (arr->count >= arr->capacity) {
+        size_t new_cap = arr->capacity == 0 ? 8 : arr->capacity * 2;
+        udx_value_entry_item *new_data = (udx_value_entry_item *)realloc(arr->elements, new_cap * sizeof(udx_value_entry_item));
+        if (new_data == NULL) return false;
+        arr->elements = new_data;
+        arr->capacity = new_cap;
+    }
+    arr->elements[arr->count++] = val;
+    return true;
+}
+
+static inline bool udx_db_value_entry_item_array_reserve(udx_db_value_entry_item_array *arr, size_t new_cap) {
+    if (arr == NULL) return false;
+    if (new_cap <= arr->capacity) return true;
+    udx_value_entry_item *new_data = (udx_value_entry_item *)realloc(arr->elements, new_cap * sizeof(udx_value_entry_item));
+    if (new_data == NULL) return false;
+    arr->elements = new_data;
+    arr->capacity = new_cap;
     return true;
 }
 
@@ -259,44 +243,66 @@ typedef struct {
 
 static inline void udx_header_serialize(const udx_header *h, uint8_t buf[UDX_HEADER_SERIALIZED_SIZE]) {
     uint8_t *p = buf;
-    memcpy(p, h->magic, 4);              p += 4;
+    memcpy(p, h->magic, 4);
+    p += 4;
     *p++ = h->version_major;
     *p++ = h->version_minor;
-    memcpy(p, &h->db_count, 2);          p += 2;
-    memcpy(p, &h->db_table_offset, 8);   p += 8;
+    memcpy(p, &h->db_count, 2);
+    p += 2;
+    memcpy(p, &h->db_table_offset, 8);
+    p += 8;
 }
 
 static inline void udx_header_deserialize(const uint8_t buf[UDX_HEADER_SERIALIZED_SIZE], udx_header *h) {
     const uint8_t *p = buf;
-    memcpy(h->magic, p, 4);              p += 4;
+    memcpy(h->magic, p, 4);
+    p += 4;
     h->version_major = *p++;
     h->version_minor = *p++;
-    memcpy(&h->db_count, p, 2);          p += 2;
-    memcpy(&h->db_table_offset, p, 8);   p += 8;
+    memcpy(&h->db_count, p, 2);
+    p += 2;
+    memcpy(&h->db_table_offset, p, 8);
+    p += 8;
 }
 
 static inline void udx_db_header_serialize(const udx_db_header *h, uint8_t buf[UDX_DB_HEADER_SERIALIZED_SIZE]) {
     uint8_t *p = buf;
-    memcpy(p, &h->chunk_table_offset, 8);      p += 8;
-    memcpy(p, &h->index_root_offset, 8);        p += 8;
-    memcpy(p, &h->index_first_leaf_offset, 8);  p += 8;
-    memcpy(p, &h->entry_count, 4);              p += 4;
-    memcpy(p, &h->item_count, 4);               p += 4;
-    memcpy(p, &h->index_bptree_height, 4);      p += 4;
-    memcpy(p, &h->metadata_size, 4);            p += 4;
-    memcpy(p, &h->checksum, 4);                 p += 4;
+    memcpy(p, &h->chunk_table_offset, 8);
+    p += 8;
+    memcpy(p, &h->index_root_offset, 8);
+    p += 8;
+    memcpy(p, &h->index_first_leaf_offset, 8);
+    p += 8;
+    memcpy(p, &h->entry_count, 4);
+    p += 4;
+    memcpy(p, &h->item_count, 4);
+    p += 4;
+    memcpy(p, &h->index_bptree_height, 4);
+    p += 4;
+    memcpy(p, &h->metadata_size, 4);
+    p += 4;
+    memcpy(p, &h->checksum, 4);
+    p += 4;
 }
 
 static inline void udx_db_header_deserialize(const uint8_t buf[UDX_DB_HEADER_SERIALIZED_SIZE], udx_db_header *h) {
     const uint8_t *p = buf;
-    memcpy(&h->chunk_table_offset, p, 8);       p += 8;
-    memcpy(&h->index_root_offset, p, 8);         p += 8;
-    memcpy(&h->index_first_leaf_offset, p, 8);   p += 8;
-    memcpy(&h->entry_count, p, 4);               p += 4;
-    memcpy(&h->item_count, p, 4);                p += 4;
-    memcpy(&h->index_bptree_height, p, 4);       p += 4;
-    memcpy(&h->metadata_size, p, 4);             p += 4;
-    memcpy(&h->checksum, p, 4);                  p += 4;
+    memcpy(&h->chunk_table_offset, p, 8);
+    p += 8;
+    memcpy(&h->index_root_offset, p, 8);
+    p += 8;
+    memcpy(&h->index_first_leaf_offset, p, 8);
+    p += 8;
+    memcpy(&h->entry_count, p, 4);
+    p += 4;
+    memcpy(&h->item_count, p, 4);
+    p += 4;
+    memcpy(&h->index_bptree_height, p, 4);
+    p += 4;
+    memcpy(&h->metadata_size, p, 4);
+    p += 4;
+    memcpy(&h->checksum, p, 4);
+    p += 4;
 }
 
 #ifdef __cplusplus
