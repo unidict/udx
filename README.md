@@ -161,15 +161,17 @@ int main() {
 
 int main() {
     // Open a UDX file
-    udx_reader *reader = udx_reader_open("mydict.udx");
-    if (!reader) {
+    udx_reader *reader = NULL;
+    udx_status st = udx_reader_open("mydict.udx", &reader);
+    if (st != UDX_OK) {
         fprintf(stderr, "Failed to open file\n");
         return 1;
     }
 
     // Open a database by name (or use NULL for first database)
-    udx_db *db = udx_db_open(reader, "english");
-    if (!db) {
+    udx_db *db = NULL;
+    st = udx_db_open(reader, "english", &db);
+    if (st != UDX_OK) {
         fprintf(stderr, "Database not found\n");
         udx_reader_close(reader);
         return 1;
@@ -242,13 +244,17 @@ udx is **not thread-safe** by design. For concurrent access:
 **Option 1: Separate reader per thread (recommended)**
 ```c
 // Thread 1
-udx_reader *r1 = udx_reader_open("dict.udx");
-udx_db *db1 = udx_db_open(r1, "english");
+udx_reader *r1 = NULL;
+udx_reader_open("dict.udx", &r1);
+udx_db *db1 = NULL;
+udx_db_open(r1, "english", &db1);
 udx_db_lookup(db1, "hello");
 
 // Thread 2
-udx_reader *r2 = udx_reader_open("dict.udx");
-udx_db *db2 = udx_db_open(r2, "english");
+udx_reader *r2 = NULL;
+udx_reader_open("dict.udx", &r2);
+udx_db *db2 = NULL;
+udx_db_open(r2, "english", &db2);
 udx_db_lookup(db2, "world");
 ```
 
@@ -258,7 +264,8 @@ pthread_mutex_t reader_lock = PTHREAD_MUTEX_INITIALIZER;
 
 // Any thread - lock reader before any operations
 pthread_mutex_lock(&reader_lock);
-udx_db *db = udx_db_open(reader, "english");
+udx_db *db = NULL;
+udx_db_open(reader, "english", &db);
 pthread_mutex_unlock(&reader_lock);
 
 pthread_mutex_lock(&reader_lock);

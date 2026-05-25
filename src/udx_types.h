@@ -26,6 +26,7 @@ typedef enum {
     // Success
     UDX_OK                      = 0,
     UDX_NOT_FOUND               = 1,
+    UDX_DONE                    = 2,
 
     // Caller errors
     UDX_ERR_INVALID_PARAM       = -1,

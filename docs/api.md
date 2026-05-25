@@ -227,16 +227,17 @@ Finish building the database.
 #### `udx_reader_open()`
 
 ```c
-udx_reader *udx_reader_open(const char *path);
+udx_status udx_reader_open(const char *path, udx_reader **out_reader);
 ```
 
 Open an existing UDX file.
 
 **Parameters:**
 - `path` - Path to the UDX file
+- `out_reader` - Output: reader handle on success
 
 **Return:**
-- Reader pointer, or `NULL` on failure
+- `UDX_OK` on success, `UDX_ERR_*` on error
 
 ---
 
@@ -308,7 +309,7 @@ Get the file offset of a database by index.
 #### `udx_db_open()`
 
 ```c
-udx_db *udx_db_open(udx_reader *reader, const char *name);
+udx_status udx_db_open(udx_reader *reader, const char *name, udx_db **out_db);
 ```
 
 Open a database by name from reader.
@@ -316,9 +317,10 @@ Open a database by name from reader.
 **Parameters:**
 - `reader` - Reader pointer
 - `name` - Database name (`NULL` for first/default database)
+- `out_db` - Output: database handle on success
 
 **Return:**
-- Database pointer, or `NULL` on failure (caller must `udx_db_close` it)
+- `UDX_OK` on success, `UDX_NOT_FOUND` if name not found, `UDX_ERR_*` on error
 
 ---
 
@@ -422,7 +424,7 @@ Look up a single key in database (index only, no data loaded).
 
 **Notes:**
 - This is faster than `udx_db_value_entry_lookup()` as it doesn't load data
-- Use `udx_db_value_entry_load()` to load data for specific key entries
+- Use `udx_db_value_entry_fetch()` to fetch data for specific key entries
 
 ---
 
@@ -445,7 +447,7 @@ Prefix match in database (index only, no data loaded).
 
 **Notes:**
 - This is useful for autocomplete/suggestion features
-- Returns entries with addresses only, use `udx_db_value_entry_load()` to load data
+- Returns entries with addresses only, use `udx_db_value_entry_fetch()` to fetch data
 
 ---
 
@@ -471,13 +473,13 @@ Look up a single key in database (with data loaded).
 
 ---
 
-#### `udx_db_value_entry_load()`
+#### `udx_db_value_entry_fetch()`
 
 ```c
-udx_status udx_db_value_entry_load(udx_db *db, const udx_db_key_entry *key_entry, udx_db_value_entry **out_entry);
+udx_status udx_db_value_entry_fetch(udx_db *db, const udx_db_key_entry *key_entry, udx_db_value_entry **out_entry);
 ```
 
-Load data for all items in a key entry.
+Fetch data for all items in a key entry.
 
 **Parameters:**
 - `db` - Database pointer
@@ -547,7 +549,7 @@ Get the next key entry from the iterator.
 - `out_entry` - Output: pointer to internal entry (valid until next call or destroy)
 
 **Return:**
-- `UDX_OK` on success, `UDX_NOT_FOUND` if no more entries, `UDX_ERR_*` on error
+- `UDX_OK` on success, `UDX_DONE` if no more entries, `UDX_ERR_*` on error
 
 **Notes:**
 - The returned pointer points to internal memory managed by the iterator

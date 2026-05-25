@@ -558,27 +558,35 @@ static udx_db *load_db_by_offset(udx_reader *reader, uint64_t offset, const char
 /**
  * Open a db by name from reader
  */
-udx_db *udx_db_open(udx_reader *reader, const char *name) {
-    if (reader == NULL) {
-        return NULL;
+udx_status udx_db_open(udx_reader *reader, const char *name, udx_db **out_db) {
+    if (reader == NULL || out_db == NULL) {
+        return UDX_ERR_INVALID_PARAM;
     }
+
+    *out_db = NULL;
 
     // Default to first db if name is NULL
     if (name == NULL) {
         if (reader->db_count == 0) {
-            return NULL;
+            return UDX_NOT_FOUND;
         }
-        return load_db_by_offset(reader, reader->db_offsets[0], reader->db_names[0]);
+        udx_db *db = load_db_by_offset(reader, reader->db_offsets[0], reader->db_names[0]);
+        if (!db) return UDX_ERR_IO;
+        *out_db = db;
+        return UDX_OK;
     }
 
     // Find by name - search in section_names array
     for (uint16_t i = 0; i < reader->db_count; i++) {
         if (strcmp(reader->db_names[i], name) == 0) {
-            return load_db_by_offset(reader, reader->db_offsets[i], name);
+            udx_db *db = load_db_by_offset(reader, reader->db_offsets[i], name);
+            if (!db) return UDX_ERR_IO;
+            *out_db = db;
+            return UDX_OK;
         }
     }
 
-    return NULL;
+    return UDX_NOT_FOUND;
 }
 
 /**
@@ -779,7 +787,7 @@ static uint8_t *udx_db_get_data(udx_db *db, udx_value_address address, uint32_t 
  * Convert udx_db_key_entry to udx_db_value_entry
  * Loads all items for the key
  */
-udx_status udx_db_value_entry_load(udx_db *db, const udx_db_key_entry *key_entry, udx_db_value_entry **out_entry) {
+udx_status udx_db_value_entry_fetch(udx_db *db, const udx_db_key_entry *key_entry, udx_db_value_entry **out_entry) {
     if (db == NULL || key_entry == NULL || out_entry == NULL) return UDX_ERR_INVALID_PARAM;
     *out_entry = NULL;
 
@@ -835,7 +843,7 @@ udx_status udx_db_value_entry_lookup(udx_db *db, const char *key, udx_db_value_e
     if (status != UDX_OK) return status;
 
     udx_db_value_entry *value_entry = NULL;
-    status = udx_db_value_entry_load(db, key_entry, &value_entry);
+    status = udx_db_value_entry_fetch(db, key_entry, &value_entry);
 
     udx_db_key_entry_free(key_entry);
 
@@ -892,20 +900,22 @@ uint32_t udx_db_get_item_count(const udx_db *db) {
 /**
  * Open UDX file and read main header and db table
  */
-udx_reader *udx_reader_open(const char *path) {
-    if (path == NULL) {
-        return NULL;
+udx_status udx_reader_open(const char *path, udx_reader **out_reader) {
+    if (path == NULL || out_reader == NULL) {
+        return UDX_ERR_INVALID_PARAM;
     }
+
+    *out_reader = NULL;
 
     udx_reader *reader = (udx_reader *)calloc(1, sizeof(udx_reader));
     if (reader == NULL) {
-        return NULL;
+        return UDX_ERR_MEMORY;
     }
 
     reader->file = fopen(path, "rb");
     if (reader->file == NULL) {
         free(reader);
-        return NULL;
+        return UDX_ERR_IO;
     }
 
     // Read main header
@@ -914,7 +924,7 @@ udx_reader *udx_reader_open(const char *path) {
         fread(header_buf, UDX_HEADER_SERIALIZED_SIZE, 1, reader->file) != 1) {
         fclose(reader->file);
         free(reader);
-        return NULL;
+        return UDX_ERR_IO;
     }
     udx_header_deserialize(header_buf, &reader->header);
 
@@ -922,14 +932,14 @@ udx_reader *udx_reader_open(const char *path) {
     if (memcmp(reader->header.magic, "UDX\0", 4) != 0) {
         fclose(reader->file);
         free(reader);
-        return NULL;
+        return UDX_ERR_FORMAT;
     }
 
     // Validate version: major must match exactly; minor is backward-compatible
     if (reader->header.version_major != UDX_VERSION_MAJOR) {
         fclose(reader->file);
         free(reader);
-        return NULL;
+        return UDX_ERR_FORMAT;
     }
 
     // Read db table (offsets and names)
@@ -938,13 +948,13 @@ udx_reader *udx_reader_open(const char *path) {
     if (table_offset == 0) {
         fclose(reader->file);
         free(reader);
-        return NULL;
+        return UDX_ERR_FORMAT;
     }
 
     if (udx_fseek(reader->file, table_offset, SEEK_SET) != 0) {
         fclose(reader->file);
         free(reader);
-        return NULL;
+        return UDX_ERR_IO;
     }
 
     // Get db_count from header
@@ -952,7 +962,7 @@ udx_reader *udx_reader_open(const char *path) {
     if (db_count == 0) {
         fclose(reader->file);
         free(reader);
-        return NULL;
+        return UDX_ERR_FORMAT;
     }
 
     // Allocate arrays
@@ -963,7 +973,7 @@ udx_reader *udx_reader_open(const char *path) {
         free(names);
         fclose(reader->file);
         free(reader);
-        return NULL;
+        return UDX_ERR_MEMORY;
     }
 
     // Read entries: (offset, name) for each db
@@ -1009,14 +1019,15 @@ udx_reader *udx_reader_open(const char *path) {
         free(offsets);
         fclose(reader->file);
         free(reader);
-        return NULL;
+        return UDX_ERR_IO;
     }
 
     reader->db_offsets = offsets;
     reader->db_names = names;
     reader->db_count = db_count;
 
-    return reader;
+    *out_reader = reader;
+    return UDX_OK;
 }
 
 /**
@@ -1129,7 +1140,7 @@ udx_status udx_db_iter_next(udx_db_iter *iter, const udx_db_key_entry **out_entr
 
         // Current leaf exhausted, try to read next leaf
         if (iter->next_leaf_offset == 0) {
-            return UDX_NOT_FOUND;
+            return UDX_DONE;
         }
 
         udx_index_node *new_leaf = read_index_node(iter->db, iter->next_leaf_offset);

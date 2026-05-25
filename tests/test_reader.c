@@ -29,22 +29,26 @@ static void create_test_file(void) {
 void test_reader_open(void) {
     create_test_file();
 
-    udx_reader* reader = udx_reader_open("test_reader.udx");
-    TEST_ASSERT_NOT_NULL_MESSAGE(reader, "reader should open successfully");
+    udx_reader *reader = NULL;
+    udx_status status = udx_reader_open("test_reader.udx", &reader);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(UDX_OK, status, "reader should open successfully");
+    TEST_ASSERT_NOT_NULL_MESSAGE(reader, "reader should not be NULL");
 
     udx_reader_close(reader);
     unlink("test_reader.udx");
 }
 
 void test_reader_open_null_path(void) {
-    udx_reader* reader = udx_reader_open(NULL);
-    TEST_ASSERT_NULL_MESSAGE(reader, "null path should return NULL");
+    udx_reader *reader = NULL;
+    udx_status status = udx_reader_open(NULL, &reader);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(UDX_ERR_INVALID_PARAM, status, "null path should return error");
 }
 
 void test_reader_get_db_count(void) {
     create_test_file();
 
-    udx_reader* reader = udx_reader_open("test_reader.udx");
+    udx_reader *reader = NULL;
+    TEST_ASSERT_EQUAL_INT(UDX_OK, udx_reader_open("test_reader.udx", &reader));
     TEST_ASSERT_NOT_NULL(reader);
 
     uint32_t count = udx_reader_get_db_count(reader);
@@ -57,11 +61,14 @@ void test_reader_get_db_count(void) {
 void test_reader_db_open(void) {
     create_test_file();
 
-    udx_reader* reader = udx_reader_open("test_reader.udx");
+    udx_reader *reader = NULL;
+    TEST_ASSERT_EQUAL_INT(UDX_OK, udx_reader_open("test_reader.udx", &reader));
     TEST_ASSERT_NOT_NULL(reader);
 
-    udx_db* db = udx_db_open(reader, "test_db");
-    TEST_ASSERT_NOT_NULL_MESSAGE(db, "database should open");
+    udx_db *db = NULL;
+    udx_status status = udx_db_open(reader, "test_db", &db);
+    TEST_ASSERT_EQUAL_INT_MESSAGE(UDX_OK, status, "database should open");
+    TEST_ASSERT_NOT_NULL_MESSAGE(db, "database should not be NULL");
 
     udx_db_close(db);
     udx_reader_close(reader);
@@ -71,11 +78,14 @@ void test_reader_db_open(void) {
 void test_reader_db_open_first(void) {
     create_test_file();
 
-    udx_reader* reader = udx_reader_open("test_reader.udx");
+    udx_reader *reader = NULL;
+    TEST_ASSERT_EQUAL_INT(UDX_OK, udx_reader_open("test_reader.udx", &reader));
     TEST_ASSERT_NOT_NULL(reader);
 
-    udx_db* db = udx_db_open(reader, NULL);  // Open first db
-    TEST_ASSERT_NOT_NULL_MESSAGE(db, "first database should open");
+    udx_db *db = NULL;
+    udx_status status = udx_db_open(reader, NULL, &db);  // Open first db
+    TEST_ASSERT_EQUAL_INT_MESSAGE(UDX_OK, status, "first database should open");
+    TEST_ASSERT_NOT_NULL_MESSAGE(db, "first database should not be NULL");
 
     udx_db_close(db);
     udx_reader_close(reader);
@@ -85,10 +95,12 @@ void test_reader_db_open_first(void) {
 void test_reader_lookup(void) {
     create_test_file();
 
-    udx_reader* reader = udx_reader_open("test_reader.udx");
+    udx_reader *reader = NULL;
+    TEST_ASSERT_EQUAL_INT(UDX_OK, udx_reader_open("test_reader.udx", &reader));
     TEST_ASSERT_NOT_NULL(reader);
 
-    udx_db* db = udx_db_open(reader, "test_db");
+    udx_db *db = NULL;
+    TEST_ASSERT_EQUAL_INT(UDX_OK, udx_db_open(reader, "test_db", &db));
     TEST_ASSERT_NOT_NULL(db);
 
     // Case-insensitive lookup: "hello" should match both "hello" and "Hello"
@@ -119,10 +131,12 @@ void test_reader_lookup(void) {
 void test_reader_prefix_match(void) {
     create_test_file();
 
-    udx_reader* reader = udx_reader_open("test_reader.udx");
+    udx_reader *reader = NULL;
+    TEST_ASSERT_EQUAL_INT(UDX_OK, udx_reader_open("test_reader.udx", &reader));
     TEST_ASSERT_NOT_NULL(reader);
 
-    udx_db* db = udx_db_open(reader, "test_db");
+    udx_db *db = NULL;
+    TEST_ASSERT_EQUAL_INT(UDX_OK, udx_db_open(reader, "test_db", &db));
     TEST_ASSERT_NOT_NULL(db);
 
     // Prefix match should find both "hello" and "Hello"
@@ -153,10 +167,12 @@ void test_reader_prefix_match(void) {
 void test_reader_iterator(void) {
     create_test_file();
 
-    udx_reader* reader = udx_reader_open("test_reader.udx");
+    udx_reader *reader = NULL;
+    TEST_ASSERT_EQUAL_INT(UDX_OK, udx_reader_open("test_reader.udx", &reader));
     TEST_ASSERT_NOT_NULL(reader);
 
-    udx_db* db = udx_db_open(reader, "test_db");
+    udx_db *db = NULL;
+    TEST_ASSERT_EQUAL_INT(UDX_OK, udx_db_open(reader, "test_db", &db));
     TEST_ASSERT_NOT_NULL(db);
 
     udx_db_iter* iter = udx_db_iter_create(db);
@@ -182,7 +198,7 @@ void test_reader_iterator(void) {
 
     // No more entries
     status = udx_db_iter_next(iter, &entry);
-    TEST_ASSERT_EQUAL_INT_MESSAGE(UDX_NOT_FOUND, status, "should have no more entries");
+    TEST_ASSERT_EQUAL_INT_MESSAGE(UDX_DONE, status, "should have no more entries");
 
     udx_db_iter_destroy(iter);
     udx_db_close(db);
@@ -193,10 +209,12 @@ void test_reader_iterator(void) {
 void test_reader_case_insensitive(void) {
     create_test_file();
 
-    udx_reader* reader = udx_reader_open("test_reader.udx");
+    udx_reader *reader = NULL;
+    TEST_ASSERT_EQUAL_INT(UDX_OK, udx_reader_open("test_reader.udx", &reader));
     TEST_ASSERT_NOT_NULL(reader);
 
-    udx_db* db = udx_db_open(reader, "test_db");
+    udx_db *db = NULL;
+    TEST_ASSERT_EQUAL_INT(UDX_OK, udx_db_open(reader, "test_db", &db));
     TEST_ASSERT_NOT_NULL(db);
 
     // All case variations should return the same results (both "hello" and "Hello" items)

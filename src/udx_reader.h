@@ -29,9 +29,10 @@ typedef struct udx_db_iter udx_db_iter;
 /**
  * Open a UDX file for reading
  * @param path File path to open
- * @return Reader handle, or NULL on failure
+ * @param out_reader Output: reader handle on success
+ * @return UDX_OK on success, UDX_ERR_* on error
  */
-udx_reader *udx_reader_open(const char *path);
+udx_status udx_reader_open(const char *path, udx_reader **out_reader);
 
 /**
  * Close reader and release resources
@@ -52,8 +53,10 @@ uint64_t udx_reader_get_db_offset(const udx_reader *reader, uint32_t index);
 
 /**
  * Open a database by name (NULL = first database)
+ * @param out_db Output: database handle on success
+ * @return UDX_OK on success, UDX_NOT_FOUND if name not found, UDX_ERR_* on error
  */
-udx_db *udx_db_open(udx_reader *reader, const char *name);
+udx_status udx_db_open(udx_reader *reader, const char *name, udx_db **out_db);
 
 /**
  * Close a database
@@ -101,11 +104,11 @@ udx_status udx_db_key_entry_prefix_match(udx_db *db, const char *prefix, size_t 
 udx_status udx_db_value_entry_lookup(udx_db *db, const char *key, udx_db_value_entry **out_entry);
 
 /**
- * Load data for all items in a key entry
+ * Fetch data for all items in a key entry
  * @param out_entry Output: value entry (caller must free with udx_db_value_entry_free)
  * @return UDX_OK on success, UDX_NOT_FOUND if key not found, UDX_ERR_* on error
  */
-udx_status udx_db_value_entry_load(udx_db *db, const udx_db_key_entry *key_entry, udx_db_value_entry **out_entry);
+udx_status udx_db_value_entry_fetch(udx_db *db, const udx_db_key_entry *key_entry, udx_db_value_entry **out_entry);
 
 // ============================================================
 // Iterator
@@ -117,7 +120,7 @@ void udx_db_iter_destroy(udx_db_iter *iter);
 /**
  * Get the next key entry from the iterator
  * @param out_entry Output: pointer to internal entry (valid until next call or destroy)
- * @return UDX_OK on success, UDX_NOT_FOUND if no more entries, UDX_ERR_* on error
+ * @return UDX_OK on success, UDX_DONE if no more entries, UDX_ERR_* on error
  */
 udx_status udx_db_iter_next(udx_db_iter *iter, const udx_db_key_entry **out_entry);
 
