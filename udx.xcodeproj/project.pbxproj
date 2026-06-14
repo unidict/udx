@@ -34,7 +34,7 @@
 
 /* Begin PBXFileReference section */
 		6912D4F72F4DA36A00E362CB /* libudx.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libudx.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		6912D59C2F4EB78400E362CB /* udx_tests */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = udx_tests; sourceTree = BUILT_PRODUCTS_DIR; };
+		6912D59C2F4EB78400E362CB /* udx-tests */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "udx-tests"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -108,7 +108,7 @@
 			isa = PBXGroup;
 			children = (
 				6912D4F72F4DA36A00E362CB /* libudx.a */,
-				6912D59C2F4EB78400E362CB /* udx_tests */,
+				6912D59C2F4EB78400E362CB /* udx-tests */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -145,9 +145,9 @@
 			productReference = 6912D4F72F4DA36A00E362CB /* libudx.a */;
 			productType = "com.apple.product-type.library.static";
 		};
-		6912D59B2F4EB78400E362CB /* udx_tests */ = {
+		6912D59B2F4EB78400E362CB /* udx-tests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 6912D5A02F4EB78400E362CB /* Build configuration list for PBXNativeTarget "udx_tests" */;
+			buildConfigurationList = 6912D5A02F4EB78400E362CB /* Build configuration list for PBXNativeTarget "udx-tests" */;
 			buildPhases = (
 				6912D5982F4EB78400E362CB /* Sources */,
 				6912D5992F4EB78400E362CB /* Frameworks */,
@@ -161,11 +161,11 @@
 			fileSystemSynchronizedGroups = (
 				695D56CD2F61128700B63539 /* tests */,
 			);
-			name = udx_tests;
+			name = "udx-tests";
 			packageProductDependencies = (
 			);
 			productName = udxtest;
-			productReference = 6912D59C2F4EB78400E362CB /* udx_tests */;
+			productReference = 6912D59C2F4EB78400E362CB /* udx-tests */;
 			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
@@ -200,7 +200,7 @@
 			projectRoot = "";
 			targets = (
 				6912D4F62F4DA36A00E362CB /* udx */,
-				6912D59B2F4EB78400E362CB /* udx_tests */,
+				6912D59B2F4EB78400E362CB /* udx-tests */,
 			);
 		};
 /* End PBXProject section */
@@ -411,7 +411,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		6912D5A02F4EB78400E362CB /* Build configuration list for PBXNativeTarget "udx_tests" */ = {
+		6912D5A02F4EB78400E362CB /* Build configuration list for PBXNativeTarget "udx-tests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				6912D5A12F4EB78400E362CB /* Debug */,
