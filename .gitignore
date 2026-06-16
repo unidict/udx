@@ -1,4 +1,8 @@
+# Xcode personal data — never track, each developer owns their own.
 *.xcuserstate
+xcuserdata/
+*.xcuserdatad/
+
 .claude/
 
 # CMake
